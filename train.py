@@ -19,6 +19,7 @@ parser = argparse.ArgumentParser(description='train a lstm over a videos dataset
 parser.add_argument('--ephocs', type=int, help='the number of ephocs')
 parser.add_argument('--dataset', help='the dataset folder which contains 2 folders, videos and labels')
 parser.add_argument('--output_file', help='output file to write loss and evaluation accuracy')
+parser.add_argument('--batch_size', type=int, help='batch size')
 
 args = parser.parse_args()
 
@@ -132,9 +133,15 @@ for epoch in range(ephocs):  # loop over the dataset multiple times
     loss.append(train_model(net, training_generator, device, optimizer, criterion, batch_size, epoch))
     #calculate accuracy over the evaluation dataset
     evaluation_accuracy.append(evaluate_model(net, evaluation_generator, device, batch_size))            
+test_accuracy = evaluate_model(net, training_generator, device, batch_size)
 
-with open(args.output_file, 'w+') as f:
-    f.write(str(loss))
-    f.write(str(evaluation_accuracy))
+file_data = {}
+file_data['test_accuracy'] = test_accuracy
+file_data['eval_accuracy'] = evaluation_accuracy
+file_data['train_loss'] = loss
+
+
+with open(args.output_file, 'wb') as f:
+    pickle.dump(file_data, f)
 
 print('Finished Training')
