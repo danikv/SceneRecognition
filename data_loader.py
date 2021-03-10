@@ -4,6 +4,7 @@ from torchvision import transforms
 import cv2
 import os
 import numpy as np
+from random import shuffle
 
 def class_labels_into_one_hot(labels):
     label = np.zeros(2, dtype=np.float32)
@@ -14,10 +15,10 @@ def class_labels_into_one_hot(labels):
     return label
 
 class MyIterableDataset(torch.utils.data.IterableDataset):
-    def __init__(self, video_folder, dict_labels):
+    def __init__(self, video_folder, dataset):
         super(MyIterableDataset).__init__()
         self._video_folder = video_folder
-        self._dict_labels = dict_labels
+        self._dataset = dataset
         self._transform = transforms.Compose([transforms.ToPILImage(),
                                              transforms.Resize((224,224)),
                                              transforms.ToTensor(),
@@ -31,7 +32,8 @@ class MyIterableDataset(torch.utils.data.IterableDataset):
         return class_labels_into_one_hot(labels)
         
     def __iter__(self):
-        for video_num, labels in self._dict_labels.items():
+        shuffle(self._dataset)
+        for video_num, labels in self._dataset:
             cap = cv2.VideoCapture(os.path.join(self._video_folder, 'video_{}.mp4'.format(video_num)))
             index = 0
             video_frames = []
