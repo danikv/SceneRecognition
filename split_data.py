@@ -9,6 +9,7 @@ parser.add_argument('--dataset', help='the dataset folder which contains 2 folde
 
 args = parser.parse_args()
 
+dataset_folder = args.dataset
 labels_folder = os.path.join(dataset_folder, 'labels')
 
 #load the preprocessed dataset

@@ -28,6 +28,7 @@ dataset_folder = args.dataset
 labels_folder = os.path.join(dataset_folder, 'labels')
 videos_folder = os.path.join(dataset_folder, 'videos')
 ephocs = args.ephocs
+batch_size = args.batch_size
 
 classes = ['normal', 'anomaly']
 
@@ -126,7 +127,6 @@ net.train(True)
 
 #start training
 torch.autograd.set_detect_anomaly(True)
-batch_size = 256
 evaluation_accuracy = []
 loss = []
 for epoch in range(ephocs):  # loop over the dataset multiple times

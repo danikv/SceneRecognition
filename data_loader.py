@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import IterableDataset, DataLoader
 from torchvision import transforms
-import cv2
+from moviepy.editor import VideoFileClip
 import os
 import numpy as np
 from random import shuffle
@@ -34,16 +34,15 @@ class MyIterableDataset(torch.utils.data.IterableDataset):
     def __iter__(self):
         shuffle(self._dataset)
         for video_num, labels in self._dataset:
-            cap = cv2.VideoCapture(os.path.join(self._video_folder, 'video_{}.mp4'.format(video_num)))
-            index = 0
-            video_frames = []
-            video_labels = []
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                frame_labels = self._generate_labels(labels, index)
-                index += 1
-                video_frames.append(self._transform(frame))
-                video_labels.append(frame_labels)
-            yield torch.stack(video_frames), np.array(video_labels)
+            print(video_num)
+            clip = VideoFileClip(os.path.join(self._video_folder, 'video_{}.mp4'.format(video_num)), audio=False)
+            array_size = int(clip.fps * clip.duration) + 1
+            video_frames = torch.FloatTensor(array_size, 3, 224, 224)
+            video_labels = np.ndarray(shape=(array_size, 2), dtype=np.float32)
+            for i, frame in enumerate(clip.iter_frames(), 0):
+                frame_labels = self._generate_labels(labels, i)
+                video_frames[i, :, :, :] = self._transform(frame)
+                video_labels[i, :] = frame_labels
+            clip.close()
+            del clip
+            yield video_frames, video_labels
