@@ -11,7 +11,7 @@ from model import BaseModel
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from data_loader import MyIterableDataset
+from video_iterator import VideoDataset
 import argparse
 from sklearn.model_selection import train_test_split
 
@@ -38,11 +38,9 @@ def train_model(model, training_generator, device, optimizer, criterion, batch_s
     num_frames = 0.0
     for i, data in enumerate(training_generator, 0):
         # get the inputs; data is a list of [inputs, labels]
-        batched_inputs, batched_labels = data
         model.init_hidden(device)
         running_loss = 0.0
-        for j in range(0, len(batched_inputs[0]), batch_size):
-            inputs, labels = batched_inputs[0][j:j + batch_size], batched_labels[0][j:j + batch_size]
+        for inputs, labels in data.batchiter(batch_size):
             inputs, labels = inputs.to(device), labels.to(device)
 
             model._hidden[0].detach_()
@@ -101,15 +99,15 @@ print(len(test))
 print(len(evaluation))
     
 
-dataset_train = MyIterableDataset(videos_folder, train)
-training_generator = torch.utils.data.DataLoader(dataset_train)
+dataset_train = VideoDataset(videos_folder, train)
+#training_generator = torch.utils.data.DataLoader(dataset_train)
 
 
-dataset_evaluation = MyIterableDataset(videos_folder, evaluation)
-evaluation_generator = torch.utils.data.DataLoader(dataset_evaluation)
+dataset_evaluation = VideoDataset(videos_folder, evaluation)
+#evaluation_generator = torch.utils.data.DataLoader(dataset_evaluation)
 
-dataset_test = MyIterableDataset(videos_folder, test)
-test_generator = torch.utils.data.DataLoader(dataset_test)
+dataset_test = VideoDataset(videos_folder, test)
+#test_generator = torch.utils.data.DataLoader(dataset_test)
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -130,10 +128,10 @@ torch.autograd.set_detect_anomaly(True)
 evaluation_accuracy = []
 loss = []
 for epoch in range(ephocs):  # loop over the dataset multiple times
-    loss.append(train_model(net, training_generator, device, optimizer, criterion, batch_size, epoch))
+    loss.append(train_model(net, dataset_train, device, optimizer, criterion, batch_size, epoch))
     #calculate accuracy over the evaluation dataset
-    evaluation_accuracy.append(evaluate_model(net, evaluation_generator, device, batch_size))            
-test_accuracy = evaluate_model(net, training_generator, device, batch_size)
+    evaluation_accuracy.append(evaluate_model(net, dataset_evaluation, device, batch_size))            
+test_accuracy = evaluate_model(net, dataset_test, device, batch_size)
 
 file_data = {}
 file_data['test_accuracy'] = test_accuracy
