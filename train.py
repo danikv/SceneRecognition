@@ -70,10 +70,9 @@ def evaluate_model(model, evaluation_generator, device, batch_size):
     model.eval()
     with torch.no_grad():
         for i, data in enumerate(evaluation_generator, 0):
-            batched_inputs, batched_labels = data
+            # get the inputs; data is a list of [inputs, labels]
             model.init_hidden(device)
-            for j in range(0, len(batched_inputs[0]), batch_size):
-                inputs, labels = batched_inputs[0][j:j + batch_size], batched_labels[0][j:j + batch_size]
+            for inputs, labels in data.batchiter(batch_size):
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
                 for i, label in enumerate(labels):
