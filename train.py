@@ -25,8 +25,8 @@ args = parser.parse_args()
 
 
 dataset_folder = args.dataset
-labels_folder = os.path.join(dataset_folder, 'labels')
-videos_folder = os.path.join(dataset_folder, 'videos')
+labels_folder = os.path.join(dataset_folder, 'Labels')
+videos_folder = os.path.join(dataset_folder, 'Vabels')
 ephocs = args.ephocs
 batch_size = args.batch_size
 
@@ -71,17 +71,15 @@ def evaluate_model(model, evaluation_generator, device, batch_size):
     correct_labels = 0.0
     model.eval()
     with torch.no_grad():
-        for i, data in enumerate(evaluation_generator, 0):
+        for data in evaluation_generator:
             batched_inputs, batched_labels = data
             model.init_hidden(device)
             for j in range(0, len(batched_inputs[0]), batch_size):
                 inputs, labels = batched_inputs[0][j:j + batch_size], batched_labels[0][j:j + batch_size]
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
-                for i, label in enumerate(labels):
-                    if label == outputs[i]:
-                        correct_labels += 1
-                    num_labels += 1
+                correct_labels += torch.sum(torch.argmax(labels) == torch.argmax(outputs))
+                num_labels += len(labels)
     return correct_labels / num_labels
 
 
