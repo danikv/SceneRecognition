@@ -7,12 +7,9 @@ import numpy as np
 from random import shuffle
 
 def class_labels_into_one_hot(labels):
-    label = np.zeros(2, dtype=np.float32)
     if not labels:
-        label[0] = 1
-    else:
-        label[1] = 1
-    return label
+        return 0
+    return 1
 
 class MyIterableDataset(torch.utils.data.IterableDataset):
     def __init__(self, video_folder, dataset):
@@ -38,11 +35,11 @@ class MyIterableDataset(torch.utils.data.IterableDataset):
             clip = VideoFileClip(os.path.join(self._video_folder, 'video_{}.mp4'.format(video_num)), audio=False)
             array_size = int(clip.fps * clip.duration) + 1
             video_frames = torch.FloatTensor(array_size, 3, 224, 224)
-            video_labels = np.ndarray(shape=(array_size, 2), dtype=np.float32)
+            video_labels = np.ndarray(shape=(array_size), dtype=np.int64)
             for i, frame in enumerate(clip.iter_frames(), 0):
                 frame_labels = self._generate_labels(labels, i)
                 video_frames[i, :, :, :] = self._transform(frame)
-                video_labels[i, :] = frame_labels
+                video_labels[i] = frame_labels
             clip.close()
             del clip
             yield video_frames, video_labels

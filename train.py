@@ -26,7 +26,7 @@ args = parser.parse_args()
 
 dataset_folder = args.dataset
 labels_folder = os.path.join(dataset_folder, 'Labels')
-videos_folder = os.path.join(dataset_folder, 'Vabels')
+videos_folder = os.path.join(dataset_folder, 'Videos')
 ephocs = args.ephocs
 batch_size = args.batch_size
 
@@ -119,7 +119,7 @@ print(device)
 net = BaseModel(512, 3)
 net.to(device)
 
-criterion = nn.BCELoss()
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 net.train(True)
 

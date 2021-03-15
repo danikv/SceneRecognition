@@ -5,27 +5,46 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='train a lstm over a videos dataset')
-parser.add_argument('--dataset', help='the dataset folder which contains 2 folders, videos and labels')
+parser.add_argument('--labels_file', help='the unified labels file')
+parser.add_argument('--output_folder', help='output folder for the train and test split files')
 
 args = parser.parse_args()
 
-dataset_folder = args.dataset
-labels_folder = os.path.join(dataset_folder, 'labels')
-
 #load the preprocessed dataset
-with open(os.path.join(labels_folder, 'unifed_labels.pkl'), 'rb') as f:
+with open(args.labels_file, 'rb') as f:
     loaded_dataset = pickle.load(f)
-
-print(loaded_dataset)
 
 
 #filter irellevent categories
 for video, atrr in loaded_dataset.items():
     atrr['labels'] = [label for label in atrr['labels'] if label[0] != 'pouring gas' and label[0] != 'gun pointing']
-    atrr['labels_in_frames'] = [label for label in atrr['labels_in_frames'] if label[0] != 'pouring gas' and label[0] != 'gun pointing']
-
 
 #separate data to test and train
 train_indexes, test_indexes = train_test_split(range(len(loaded_dataset)), test_size=0.2)
-train = [(key, value['labels_in_frames']) for key,value in loaded_dataset.items() if key in train_indexes]
-test = [(key, value['labels_in_frames']) for key,value in loaded_dataset.items() if key in test_indexes]
+train = [(key, value) for key,value in loaded_dataset.items() if key in train_indexes]
+test = [(key, value) for key,value in loaded_dataset.items() if key in test_indexes]
+
+for key, value in train:
+    if not value['labels']:
+        value['num_frames'] = int(value['num_frames'] / 8)
+
+with open(os.path.join(args.output_folder, 'train.pkl'), 'wb') as f:
+    pickle.dump(train, f)
+
+with open(os.path.join(args.output_folder, 'test.pkl'), 'wb') as f:
+    pickle.dump(test, f)
+
+#check if data is balanced
+normal_video_frames = 0
+anomaly_video_frames = 0
+for key, value in train:
+    anomaly = 0
+    for label in value['labels']:
+        anomaly += label[2] - label[1]
+    normal_video_frames += value['num_frames'] - anomaly
+    anomaly_video_frames += anomaly
+
+print(normal_video_frames)
+print(anomaly_video_frames)
+print(anomaly_video_frames / (anomaly_video_frames + normal_video_frames))
+
