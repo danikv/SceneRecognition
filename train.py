@@ -60,10 +60,8 @@ def evaluate_model(model, evaluation_generator, device, batch_size):
             for inputs, labels in data.batchiter(batch_size):
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
-                for i, label in enumerate(labels):
-                    if label == outputs[i]:
-                        correct_labels += 1
-                    num_labels += 1
+                correct_labels += torch.sum(torch.argmax(labels) == torch.argmax(outputs))
+                num_labels += len(labels)
     return correct_labels / num_labels
 
 
@@ -120,9 +118,8 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     net.train(True)
-
+    
     #start training
-    torch.autograd.set_detect_anomaly(True)
     evaluation_accuracy = []
     loss = []
 
