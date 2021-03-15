@@ -20,7 +20,7 @@ class BaseModel(nn.Module):
         self._dropout = nn.Dropout(0.2)
         self._fc3 = nn.Linear(256 , 128)
         self._fc4 = nn.Linear(128, 2)
-        self._sigm = nn.Sigmoid()
+        self._softmax = nn.Softmax()
         self._hidden = None
 
 
@@ -40,4 +40,4 @@ class BaseModel(nn.Module):
         x = self._dropout(x)
         x = self._fc3(x)
         x = self._fc4(x)
-        return self._sigm(x)
+        return self._softmax(x)
