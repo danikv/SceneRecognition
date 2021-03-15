@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
 
     dataset_folder = args.dataset
-    labels_folder = os.path.join(dataset_folder, 'labels')
+    labels_folder = os.path.join(dataset_folder, 'Preprocessed-Labels')
     videos_folder = os.path.join(dataset_folder, 'videos-Images')
     ephocs = args.ephocs
     batch_size = args.batch_size
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     net = BaseModel(512, 3)
     net.to(device)
 
-    criterion = nn.BCELoss()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     net.train(True)
 
