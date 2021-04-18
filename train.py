@@ -26,6 +26,7 @@ def train_model(model, training_generator, device, optimizer, criterion, batch_s
         # get the inputs; data is a list of [inputs, labels]
         model.init_hidden(device)
         running_loss = 0.0
+        logging.info('start new video {}'.format(i))
         for inputs, labels in data.batchiter(batch_size):
             inputs, labels = inputs.to(device), labels.to(device)
 
@@ -79,7 +80,7 @@ if __name__ == "__main__":
 
     dataset_folder = args.dataset
     labels_folder = os.path.join(dataset_folder, 'Preprocessed-Labels')
-    videos_folder = os.path.join(dataset_folder, 'videos-Images')
+    videos_folder = os.path.join(dataset_folder, 'Videos-Images')
     ephocs = args.ephocs
     batch_size = args.batch_size
     num_processes = args.num_processes

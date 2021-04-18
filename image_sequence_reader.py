@@ -45,7 +45,7 @@ def retrive_batch(start_index, end_index, labels, image_sequence_folder):
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         frames.append(transform(image))
-        frame_labels.append(generate_labels(labels, i))
+        frame_labels.append(generate_labels(labels['labels'], i))
     return frames, frame_labels
 
 class ImageSequenceIterator():
@@ -58,7 +58,7 @@ class ImageSequenceIterator():
 
     def batchiter(self, batch_size):
         batched_frames = torch.FloatTensor(batch_size, 3, 224, 224)
-        batched_labels = np.ndarray(shape=(batch_size, 2), dtype=np.float32)
+        batched_labels = np.ndarray(shape=(batch_size), dtype=np.int64)
         partial_retrive_batch = partial(retrive_batch, labels=self._labels, image_sequence_folder=self._image_sequence_folder)
         for i in range(0, self._number_of_frames, batch_size):
             inputs = []
@@ -75,5 +75,5 @@ class ImageSequenceIterator():
                 for z, (image, label) in enumerate(zip(images, labels)):
                     current_index = j * process_batch + z
                     batched_frames[current_index, :, :, :] = image
-                    batched_labels[current_index, :] = label
+                    batched_labels[current_index] = label
             yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])

@@ -20,7 +20,6 @@ class BaseModel(nn.Module):
         self._dropout = nn.Dropout(0.2)
         self._fc3 = nn.Linear(256 , 128)
         self._fc4 = nn.Linear(128, 2)
-        self._softmax = nn.Softmax()
         self._hidden = None
 
 
@@ -35,9 +34,8 @@ class BaseModel(nn.Module):
         x, hidden = self._lstm(x, self._hidden)
         self._hidden = hidden
         x = x.reshape(-1, self._hidden_dim)
-        x = self._fc2(x)
+        x = F.relu(self._fc2(x))
         x = self._batch(x)
         x = self._dropout(x)
-        x = self._fc3(x)
-        x = self._fc4(x)
-        return self._softmax(x)
+        x = F.relu(self._fc3(x))
+        return F.relu(self._fc4(x))
