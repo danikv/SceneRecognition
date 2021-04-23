@@ -22,20 +22,19 @@ classes = ['normal', 'anomaly']
 def train_model(model, training_generator, device, optimizer, criterion, batch_size, epoch):
     current_loss = 0.0
     num_frames = 0.0
+    model.train()
     for i, data in enumerate(training_generator, 0):
         # get the inputs; data is a list of [inputs, labels]
-        model.init_hidden(device)
+#        model.init_hidden(device)
         running_loss = 0.0
-        logging.info('start new video {}'.format(i))
         for inputs, labels in data.batchiter(batch_size):
             inputs, labels = inputs.to(device), labels.to(device)
 
-            model._hidden[0].detach_()
-            model._hidden[1].detach_()
+ #           model._hidden[0].detach_()
+  #          model._hidden[1].detach_()
 
             # zero the parameter gradients
             optimizer.zero_grad()
-
             # forward + backward + optimize
             outputs = model(inputs)
 
@@ -57,11 +56,12 @@ def evaluate_model(model, evaluation_generator, device, batch_size):
     model.eval()
     with torch.no_grad():
         for i, data in enumerate(evaluation_generator, 0):
-            model.init_hidden(device)
+#            model.init_hidden(device)
             for inputs, labels in data.batchiter(batch_size):
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
-                correct_labels += torch.sum(torch.argmax(labels) == torch.argmax(outputs))
+                print(outputs.shape)
+                correct_labels += torch.sum(labels == torch.argmax(outputs, dim=1))
                 num_labels += len(labels)
     return correct_labels / num_labels
 
@@ -74,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, help='batch size')
     parser.add_argument('--num_processes', type=int, help='number of processes to use during trainging')
     parser.add_argument('--logger_file', help='output file for loggings')
+    parser.add_argument('--model_save_path', help='path for model saving')
 
     args = parser.parse_args()
 
@@ -85,8 +86,9 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     num_processes = args.num_processes
     logging_output_file = args.logger_file
+    model_path = args.model_save_path
 
-    logging.basicConfig(filename=logging_output_file, filemode='w', format='%(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+    logging.basicConfig(filename=logging_output_file, filemode='w', format='%(asctime)s %(levelname)-8s %(message)s', level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
     train = []
     with open(os.path.join(labels_folder, 'train.pkl'), 'rb') as f:
@@ -125,12 +127,17 @@ if __name__ == "__main__":
     loss = []
 
     logging.info('start training')
+    best_accuracy = 0
     for epoch in range(ephocs):  # loop over the dataset multiple times
         logging.info('starting epoch {}'.format(epoch))
         loss.append(train_model(net, dataset_train, device, optimizer, criterion, batch_size, epoch))
         #calculate accuracy over the evaluation dataset
         logging.info('starting evaluation {}'.format(epoch))
-        evaluation_accuracy.append(evaluate_model(net, dataset_evaluation, device, batch_size))            
+        evaluation_accuracy.append(evaluate_model(net, dataset_evaluation, device, batch_size)) 
+        if evaluation_accuracy[-1] > best_accuracy:
+           best_accuracy = evaluation_accuracy[-1]
+           torch.save(net.state_dict(), os.path.join(model_path, 'restnet_101_{}.model'.format(best_accuracy)))
+        logging.info('current accuracy : {}'.format(evaluation_accuracy[-1]))           
     test_accuracy = evaluate_model(net, dataset_test, device, batch_size)
 
     file_data = {}
@@ -138,6 +145,7 @@ if __name__ == "__main__":
     file_data['eval_accuracy'] = evaluation_accuracy
     file_data['train_loss'] = loss
 
+    logging.info(file_data)
 
     with open(args.output_file, 'wb') as f:
         pickle.dump(file_data, f)

@@ -11,16 +11,16 @@ class BaseModel(nn.Module):
         for param in self._resnet101.parameters():
             param.requires_grad = False
         in_features = self._resnet101.fc.in_features
-        self._resnet101.fc = nn.Linear(in_features, 1024)
-        self._layer_dim = num_layers
-        self._lstm = nn.LSTM(1024, hidden_dim, num_layers, dropout=0.2)
-        self._hidden_dim = hidden_dim
-        self._fc2 = nn.Linear(hidden_dim, 256)
-        self._batch = nn.BatchNorm1d(256)
+        self._resnet101.fc = nn.Linear(in_features, 512)
+#       self._layer_dim = num_layers
+#        self._lstm = nn.LSTM(1024, hidden_dim, num_layers, dropout=0.2)
+#        self._hidden_dim = hidden_dim
+        self._fc2 = nn.Linear(512, 256)
+#        self._batch = nn.BatchNorm1d(256)
         self._dropout = nn.Dropout(0.2)
         self._fc3 = nn.Linear(256 , 128)
         self._fc4 = nn.Linear(128, 2)
-        self._hidden = None
+#        self._hidden = None
 
 
     def init_hidden(self, device):
@@ -30,12 +30,13 @@ class BaseModel(nn.Module):
         
 
     def forward(self, x):
-        x = self._resnet101(x).view(-1, 1, 1024)
-        x, hidden = self._lstm(x, self._hidden)
-        self._hidden = hidden
-        x = x.reshape(-1, self._hidden_dim)
+        x = F.relu(self._resnet101(x))
+        print(x.shape)
+ #       x, hidden = self._lstm(x, self._hidden)
+ #       self._hidden = hidden
+ #       x = x.reshape(-1, self._hidden_dim)
         x = F.relu(self._fc2(x))
-        x = self._batch(x)
+ #       x = self._batch(x)
         x = self._dropout(x)
         x = F.relu(self._fc3(x))
         return F.relu(self._fc4(x))
