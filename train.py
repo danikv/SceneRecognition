@@ -6,69 +6,16 @@ import torch
 from torch.utils.data import IterableDataset, DataLoader
 from torchvision import transforms
 import cv2
-from multiprocessing import Process, Queue
-from model import BaseModel
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from image_sequence_reader import ImageSequenceDataset
+from loaders.image_sequence_reader import ImageSequenceDataset
 import argparse
 from sklearn.model_selection import train_test_split
 import logging
+from importlib import import_module
 
 classes = ['normal', 'anomaly']
-
-
-def train_model(model, training_generator, device, optimizer, criterion, batch_size, epoch):
-    current_loss = 0.0
-    num_frames = 0.0
-    num_videos = 0.0
-    correct_labels = 0.0
-    for i, data in enumerate(training_generator, 0):
-        # get the inputs; data is a list of [inputs, labels]
-#        model.init_hidden(device)
-        running_loss = 0.0
-        for inputs, labels in data.batchiter(batch_size):
-            inputs, labels = inputs.to(device), labels.to(device)
-
- #           model._hidden[0].detach_()
-  #          model._hidden[1].detach_()
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
-            # forward + backward + optimize
-            outputs = model(inputs)
-
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            # print statistics
-            num_frames += batch_size
-            current_loss += loss.item()
-            running_loss += loss.item()            
-            correct_labels += (labels == torch.argmax(outputs, dim=1)).float().sum()
-        logging.info('[%d, %5d] loss: %.3f' %
-                (epoch + 1, i, running_loss))
-        num_videos += 1
-    return current_loss / num_videos, correct_labels / num_frames
-
-def evaluate_model(model, evaluation_generator, device, batch_size, criterion):
-    num_labels = 0.0
-    correct_labels = 0.0
-    loss = 0.0
-    num_videos = 0.0
-    with torch.no_grad():
-        for i, data in enumerate(evaluation_generator, 0):
-#            model.init_hidden(device)
-            for inputs, labels in data.batchiter(batch_size):
-                inputs, labels = inputs.to(device), labels.to(device)
-                outputs = model(inputs)
-                loss += criterion(outputs, labels)
-                correct_labels += (labels == torch.argmax(outputs, dim=1)).float().sum()
-                num_labels += len(labels)
-            num_videos += 1
-    return loss / num_videos, correct_labels / num_labels
 
 
 if __name__ == "__main__":
@@ -80,6 +27,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_processes', type=int, help='number of processes to use during trainging')
     parser.add_argument('--logger_file', help='output file for loggings')
     parser.add_argument('--model_save_path', help='path for model saving')
+    parser.add_argument('--model_class', help='model class')
 
     args = parser.parse_args()
 
@@ -92,6 +40,7 @@ if __name__ == "__main__":
     num_processes = args.num_processes
     logging_output_file = args.logger_file
     model_path = args.model_save_path
+    model_class = getattr(import_module('models.{}'.format(args.model_class.lower())), args.model_class)
 
     logging.basicConfig(filename=logging_output_file, filemode='w', format='%(asctime)s %(levelname)-8s %(message)s', level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -105,14 +54,14 @@ if __name__ == "__main__":
 
     train, evaluation = train_test_split(train, test_size=0.2)
 
-    dataset_train = ImageSequenceDataset(videos_folder, train, num_processes)
+    dataset_train = ImageSequenceDataset(videos_folder, train, num_processes, batch_size)
     #training_generator = torch.utils.data.DataLoader(dataset_train)
 
 
-    dataset_evaluation = ImageSequenceDataset(videos_folder, evaluation, num_processes)
+    dataset_evaluation = ImageSequenceDataset(videos_folder, evaluation, num_processes, batch_size)
     #evaluation_generator = torch.utils.data.DataLoader(dataset_evaluation)
 
-    dataset_test = ImageSequenceDataset(videos_folder, test, num_processes)
+    dataset_test = ImageSequenceDataset(videos_folder, test, num_processes, batch_size)
     #test_generator = torch.utils.data.DataLoader(dataset_test)
 
 
@@ -120,12 +69,12 @@ if __name__ == "__main__":
 
     # Assuming that we are on a CUDA machine, this should print a CUDA device:
 
-    net = BaseModel(512, 3)
-    net.to(device)
+    model = model_class(2)
+    model.to(device)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-    net.train(True)
+    criterion = nn.CrossEntropyLoss().cuda()
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    model.train(True)
     
     #start training
     evaluation_data = []
@@ -135,16 +84,16 @@ if __name__ == "__main__":
     best_accuracy = 0
     for epoch in range(ephocs):  # loop over the dataset multiple times
         logging.info('starting epoch {}'.format(epoch))
-        train_data.append(train_model(net, dataset_train, device, optimizer, criterion, batch_size, epoch))
+        train_data.append(model.train_model(dataset_train, device, optimizer, criterion, epoch))
         #calculate accuracy over the evaluation dataset
         logging.info('starting evaluation {}'.format(epoch))
-        evaluation_data.append(evaluate_model(net, dataset_evaluation, device, batch_size, criterion)) 
+        evaluation_data.append(model.evaluate_model(dataset_evaluation, device, criterion)) 
         if evaluation_data[-1][1] > best_accuracy:
            best_accuracy = evaluation_data[-1][1]
-           torch.save(net.state_dict(), os.path.join(model_path, 'restnet_101_{}.model'.format(best_accuracy)))
+           torch.save(model.state_dict(), os.path.join(model_path, 'restnet_101_{}.model'.format(best_accuracy)))
         logging.info(evaluation_data)
         logging.info(train_data)
-    test_data = evaluate_model(net, dataset_test, device, batch_size, criterion)
+    test_data = evaluate_model(model, dataset_test, device, criterion)
 
     file_data = {}
     file_data['test__data'] = test_data
