@@ -69,7 +69,7 @@ class CNN_Resnet_Model(nn.Module):
                     outputs = self(inputs)
                     loss += criterion(outputs, labels)
                     correct_labels += (labels == torch.argmax(outputs, dim=1)).float().sum()
-                    num_labels += len(labels)
+                    num_labels += labels.shape[0]
                 num_videos += 1
         return loss / num_videos, correct_labels / num_labels
 
