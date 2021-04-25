@@ -22,7 +22,8 @@ classes = ['normal', 'anomaly']
 def train_model(model, training_generator, device, optimizer, criterion, batch_size, epoch):
     current_loss = 0.0
     num_frames = 0.0
-    model.train()
+    num_videos = 0.0
+    correct_labels = 0.0
     for i, data in enumerate(training_generator, 0):
         # get the inputs; data is a list of [inputs, labels]
 #        model.init_hidden(device)
@@ -45,25 +46,29 @@ def train_model(model, training_generator, device, optimizer, criterion, batch_s
             # print statistics
             num_frames += batch_size
             current_loss += loss.item()
-            running_loss += loss.item()
+            running_loss += loss.item()            
+            correct_labels += (labels == torch.argmax(outputs, dim=1)).float().sum()
         logging.info('[%d, %5d] loss: %.3f' %
                 (epoch + 1, i, running_loss))
-    return current_loss / num_frames
+        num_videos += 1
+    return current_loss / num_videos, correct_labels / num_frames
 
-def evaluate_model(model, evaluation_generator, device, batch_size):
+def evaluate_model(model, evaluation_generator, device, batch_size, criterion):
     num_labels = 0.0
     correct_labels = 0.0
-    model.eval()
+    loss = 0.0
+    num_videos = 0.0
     with torch.no_grad():
         for i, data in enumerate(evaluation_generator, 0):
 #            model.init_hidden(device)
             for inputs, labels in data.batchiter(batch_size):
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
-                print(outputs.shape)
-                correct_labels += torch.sum(labels == torch.argmax(outputs, dim=1))
+                loss += criterion(outputs, labels)
+                correct_labels += (labels == torch.argmax(outputs, dim=1)).float().sum()
                 num_labels += len(labels)
-    return correct_labels / num_labels
+            num_videos += 1
+    return loss / num_videos, correct_labels / num_labels
 
 
 if __name__ == "__main__":
@@ -123,27 +128,28 @@ if __name__ == "__main__":
     net.train(True)
     
     #start training
-    evaluation_accuracy = []
-    loss = []
+    evaluation_data = []
+    train_data = []
 
     logging.info('start training')
     best_accuracy = 0
     for epoch in range(ephocs):  # loop over the dataset multiple times
         logging.info('starting epoch {}'.format(epoch))
-        loss.append(train_model(net, dataset_train, device, optimizer, criterion, batch_size, epoch))
+        train_data.append(train_model(net, dataset_train, device, optimizer, criterion, batch_size, epoch))
         #calculate accuracy over the evaluation dataset
         logging.info('starting evaluation {}'.format(epoch))
-        evaluation_accuracy.append(evaluate_model(net, dataset_evaluation, device, batch_size)) 
-        if evaluation_accuracy[-1] > best_accuracy:
-           best_accuracy = evaluation_accuracy[-1]
+        evaluation_data.append(evaluate_model(net, dataset_evaluation, device, batch_size, criterion)) 
+        if evaluation_data[-1][1] > best_accuracy:
+           best_accuracy = evaluation_data[-1][1]
            torch.save(net.state_dict(), os.path.join(model_path, 'restnet_101_{}.model'.format(best_accuracy)))
-        logging.info('current accuracy : {}'.format(evaluation_accuracy[-1]))           
-    test_accuracy = evaluate_model(net, dataset_test, device, batch_size)
+        logging.info(evaluation_data)
+        logging.info(train_data)
+    test_data = evaluate_model(net, dataset_test, device, batch_size, criterion)
 
     file_data = {}
-    file_data['test_accuracy'] = test_accuracy
-    file_data['eval_accuracy'] = evaluation_accuracy
-    file_data['train_loss'] = loss
+    file_data['test__data'] = test_data
+    file_data['val_data'] = evaluation_data
+    file_data['train_data'] = train_data
 
     logging.info(file_data)
 
