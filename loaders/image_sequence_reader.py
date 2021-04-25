@@ -44,6 +44,7 @@ def generate_labels(labels_in_frames, video_frame_index):
 def retrive_batch(start_index, end_index, labels, image_sequence_folder):
     frames = []
     frame_labels = []
+    print('bla')
     for i in range(start_index, end_index):
         image_path = os.path.join(image_sequence_folder, 'video-{:09d}.png'.format(i))
         image = cv2.imread(image_path)
@@ -60,7 +61,6 @@ class ImageSequenceIterator():
         self._number_of_frames = labels['num_frames']
         self._pool = pool
         self._batch_size = batch_size
-        self._queue = Queue(5)
 
     def batchiter(self):
         batched_frames = torch.FloatTensor(self._batch_size, 3, 224, 224)
@@ -75,15 +75,23 @@ class ImageSequenceIterator():
                 else:
                     inputs.append((i + j, self._number_of_frames))
                     break
-        outputs = self._pool.starmap_async(partial_retrive_batch, inputs)
         current_index = 0
-        for output in outputs.get():
-            index, images, labels = output
-            for image, label in zip(images, labels):
-                batched_frames[current_index, :, :, :] = transform(image)
-                batched_labels[current_index] = label
-                current_index += 1
-            if current_index == self._batch_size:
-                yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])
-                current_index = 0
-        yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])
+        outputs = []
+        for x in range(i):
+            if x == i - 1:
+                outputs.append(self._pool.starmap_async(partial_retrive_batch, inputs[x * self._num_processes:]))
+            else:
+                outputs.append(self._pool.starmap_async(partial_retrive_batch, inputs[x * self._num_processes:(x+1) * self._num_processes]))
+        for output in outputs:
+            for batch in output.get():
+                index, images, labels = batch
+                print(index)
+                for image, label in zip(images, labels):
+                    batched_frames[current_index, :, :, :] = transform(image)
+                    batched_labels[current_index] = label
+                    current_index += 1
+                if current_index == self._batch_size:
+                    yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])
+                    current_index = 0
+        if current_index != 0:
+            yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])

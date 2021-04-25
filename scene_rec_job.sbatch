@@ -21,4 +21,4 @@ source activate scene_recognition
 
 echo 'Finished Copying , start training'
 
-python /home/kovachev/SceneRecognition/train.py --ephocs 100 --dataset /home/kovachev/Dataset --output_file /home/kovachev/model_perf.pkl --batch_size 800 --num_processes 16 --model_save_path /home/kovachev > /home/kovachev/output.log
+python /home/kovachev/SceneRecognition/train.py --ephocs 100 --dataset /home/kovachev/Dataset --output_file /home/kovachev/model_perf.pkl --batch_size 800 --num_processes 16 --model_save_path /home/kovachev --model_class Base_Model > /home/kovachev/output.log
