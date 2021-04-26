@@ -80,7 +80,7 @@ class LSTM_Base_Model(nn.Module):
         return current_loss / num_videos, correct_labels / num_frames
 
     
-    def evaluate_model(model, evaluation_generator, device, batch_size, criterion):
+    def evaluate_model(model, evaluation_generator, device, criterion):
         num_labels = 0.0
         correct_labels = 0.0
         loss = 0.0
@@ -88,7 +88,7 @@ class LSTM_Base_Model(nn.Module):
         with torch.no_grad():
             for i, data in enumerate(evaluation_generator, 0):
                 self.init_hidden(device)
-                for inputs, labels in data.batchiter(batch_size):
+                for inputs, labels in data.batchiter():
                     inputs, labels = inputs.to(device), labels.to(device)
                     outputs = self(inputs)
                     loss += criterion(outputs, labels)

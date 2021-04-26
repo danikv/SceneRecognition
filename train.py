@@ -27,6 +27,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_processes', type=int, help='number of processes to use during trainging')
     parser.add_argument('--logger_file', help='output file for loggings')
     parser.add_argument('--model_save_path', help='path for model saving')
+    parser.add_argument('--model_prefix', help='model prefix for saving')
     parser.add_argument('--model_class', help='model class')
 
     args = parser.parse_args()
@@ -40,12 +41,13 @@ if __name__ == "__main__":
     num_processes = args.num_processes
     logging_output_file = args.logger_file
     model_path = args.model_save_path
+    model_prefix = args.model_prefix
     model_class = getattr(import_module('models.{}'.format(args.model_class.lower())), args.model_class)
 
     logging.basicConfig(filename=logging_output_file, filemode='w', format='%(asctime)s %(levelname)-8s %(message)s', level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
     train = []
-    with open(os.path.join(labels_folder, 'train.pkl'), 'rb') as f:
+    with open(os.path.join(labels_folder, 'train_without_normal.pkl'), 'rb') as f:
         train = pickle.load(f)
 
     test = []
@@ -90,7 +92,7 @@ if __name__ == "__main__":
         evaluation_data.append(model.evaluate_model(dataset_evaluation, device, criterion)) 
         if evaluation_data[-1][1] > best_accuracy:
            best_accuracy = evaluation_data[-1][1]
-           torch.save(model.state_dict(), os.path.join(model_path, 'restnet_101_{}.model'.format(best_accuracy)))
+           torch.save(model.state_dict(), os.path.join(model_path, '{}-{}.model'.format(model_prefix, best_accuracy)))
         logging.info(evaluation_data)
         logging.info(train_data)
     test_data = evaluate_model(model, dataset_test, device, criterion)
