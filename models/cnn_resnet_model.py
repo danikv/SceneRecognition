@@ -5,9 +5,9 @@ import torch.nn.functional as F
 import torchvision.models as models
 import logging
 
-class Base_Model(nn.Module):
+class CNN_Resnet_Model(nn.Module):
     def __init__(self, num_classes):
-        super(Base_Model, self).__init__()
+        super(CNN_Resnet_Model, self).__init__()
         self._resnet101 = models.resnet101(pretrained=True)
         for param in self._resnet101.parameters():
             param.requires_grad = False

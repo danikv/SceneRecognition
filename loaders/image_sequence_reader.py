@@ -9,10 +9,8 @@ import cv2
 from functools import partial
 import logging
 
-transform = transforms.Compose([transforms.ToPILImage(),
-                                    transforms.Resize((224,224)),
-                                    transforms.ToTensor(),
-                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+transform = transforms.Compose([transforms.ToTensor(),
+                                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
 def class_labels_into_one_hot(labels):
     if not labels:
@@ -48,7 +46,8 @@ def retrive_batch(start_index, end_index, labels, image_sequence_folder):
         image_path = os.path.join(image_sequence_folder, 'video-{:09d}.png'.format(i))
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        frames.append(image)
+        image = cv2.resize(image, (224, 224))
+        frames.append(image / 255)
         frame_labels.append(generate_labels(labels['labels'], i))
     return start_index, frames, frame_labels
 
