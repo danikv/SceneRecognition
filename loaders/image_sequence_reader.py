@@ -4,9 +4,8 @@ from moviepy.editor import VideoFileClip
 import os
 import numpy as np
 from random import shuffle
-from multiprocessing import Pool, Queue
 import cv2
-from functools import partial
+import concurrent.futures
 import logging
 
 transform = transforms.Compose([transforms.ToTensor(),
@@ -25,19 +24,20 @@ class ImageSequenceDataset():
         self._batch_size = batch_size
         
     def __iter__(self):
+        batched_frames = torch.cuda.FloatTensor(self._batch_size, 3, 224, 224)
+        batched_labels = torch.cuda.LongTensor(self._batch_size)
         shuffle(self._dataset)
-        pool = Pool(self._num_processes)
-        for video_num, labels in self._dataset:
-            image_sequence_folder = os.path.join(self._video_folder, 'video_{}'.format(video_num))
-            logging.debug('starting video {}, num frames : {}'.format(video_num, labels['num_frames']))
-            yield ImageSequenceIterator(image_sequence_folder, labels, self._num_processes, pool, self._batch_size)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._num_processes) as executor:
+            for video_num, labels in self._dataset:
+                image_sequence_folder = os.path.join(self._video_folder, 'video_{}'.format(video_num))
+                logging.debug('starting video {}, num frames : {}'.format(video_num, labels['num_frames']))
+                yield ImageSequenceIterator(image_sequence_folder, labels, self._num_processes, executor, self._batch_size, batched_frames, batched_labels)
 
 def generate_labels(labels_in_frames, video_frame_index):
-    frame_labels = []
     for label in labels_in_frames:
         if int(label[1]) <= video_frame_index <= int(label[2]):
-            frame_labels.append(label[0])
-    return class_labels_into_one_hot(frame_labels)
+            return 1
+    return 0
 
 def retrive_batch(start_index, end_index, labels, image_sequence_folder):
     frames = []
@@ -46,25 +46,24 @@ def retrive_batch(start_index, end_index, labels, image_sequence_folder):
         image_path = os.path.join(image_sequence_folder, 'video-{:09d}.png'.format(i))
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, (224, 224))
-        frames.append(image / 255)
+        frames.append(transform(cv2.resize(image, (224, 224)) / 255))
         frame_labels.append(generate_labels(labels['labels'], i))
-    return start_index, frames, frame_labels
+    return frames, frame_labels
 
 class ImageSequenceIterator():
-    def __init__(self, image_sequence_folder, labels, num_processes, pool, batch_size):
+    def __init__(self, image_sequence_folder, labels, num_processes, pool, batch_size, batched_frames, batched_labels):
         self._image_sequence_folder = image_sequence_folder
         self._labels = labels
         self._num_processes = num_processes
         self._number_of_frames = labels['num_frames']
         self._pool = pool
         self._batch_size = batch_size
+        self._batched_frames = batched_frames
+        self._batched_labels = batched_labels
 
     def batchiter(self):
-        batched_frames = torch.FloatTensor(self._batch_size, 3, 224, 224)
-        batched_labels = np.ndarray(shape=(self._batch_size), dtype=np.int64)
-        partial_retrive_batch = partial(retrive_batch, labels=self._labels, image_sequence_folder=self._image_sequence_folder)
         process_batch = int(self._batch_size / self._num_processes)
+        current_index = 0
         inputs = []
         for i in range(0, self._number_of_frames, self._batch_size):
             for j in range(1, self._batch_size + 1, process_batch):
@@ -73,22 +72,15 @@ class ImageSequenceIterator():
                 else:
                     inputs.append((i + j, self._number_of_frames))
                     break
-        current_index = 0
-        outputs = []
-        for x in range(i + 1):
-            if x == i - 1:
-                outputs.append(self._pool.starmap_async(partial_retrive_batch, inputs[x * self._num_processes:]))
-            else:
-                outputs.append(self._pool.starmap_async(partial_retrive_batch, inputs[x * self._num_processes:(x+1) * self._num_processes]))
-        for output in outputs:
-            for batch in output.get():
-                index, images, labels = batch
-                for image, label in zip(images, labels):
-                    batched_frames[current_index, :, :, :] = transform(image)
-                    batched_labels[current_index] = label
-                    current_index += 1
-                if current_index == self._batch_size:
-                    yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])
-                    current_index = 0
+        results = self._pool.map(lambda x : retrive_batch(x[0], x[1], self._labels, self._image_sequence_folder), inputs)
+        for output in results:
+            images, labels = output
+            for image, label in zip(images, labels):
+                self._batched_frames[current_index, :, :, :] = image
+                self._batched_labels[current_index] = label
+                current_index += 1
+            if current_index == self._batch_size:
+                yield self._batched_frames, self._batched_labels
+                current_index = 0
         if current_index != 0:
-            yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])
+            yield self._batched_frames.narrow(0, 0, current_index), self._batched_labels.narrow(0, 0, current_index)

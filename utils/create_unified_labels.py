@@ -22,6 +22,8 @@ for (dirpath, dirnames, filenames) in os.walk(labels_folder):
         with open(os.path.join(labels_folder, file)) as f:
             number = utils.get_number_from_filename(file)
             labels = json.load(f)['labels']
+            if len(labels) == 0:
+                continue
             current_images_folder = os.path.join(video_images_folder, 'video_{}'.format(number))
             dataset[number]['num_frames'] = len(os.listdir(current_images_folder))
             labels_as_frames = []

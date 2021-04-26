@@ -54,6 +54,8 @@ if __name__ == "__main__":
     with open(os.path.join(labels_folder, 'test.pkl'), 'rb') as f:
         test = pickle.load(f)
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     train, evaluation = train_test_split(train, test_size=0.2)
 
     dataset_train = ImageSequenceDataset(videos_folder, train, num_processes, batch_size)
@@ -66,8 +68,6 @@ if __name__ == "__main__":
     dataset_test = ImageSequenceDataset(videos_folder, test, num_processes, batch_size)
     #test_generator = torch.utils.data.DataLoader(dataset_test)
 
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Assuming that we are on a CUDA machine, this should print a CUDA device:
 
