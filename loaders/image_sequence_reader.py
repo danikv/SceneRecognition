@@ -44,7 +44,6 @@ def generate_labels(labels_in_frames, video_frame_index):
 def retrive_batch(start_index, end_index, labels, image_sequence_folder):
     frames = []
     frame_labels = []
-    print('bla')
     for i in range(start_index, end_index):
         image_path = os.path.join(image_sequence_folder, 'video-{:09d}.png'.format(i))
         image = cv2.imread(image_path)
@@ -77,7 +76,7 @@ class ImageSequenceIterator():
                     break
         current_index = 0
         outputs = []
-        for x in range(i):
+        for x in range(i + 1):
             if x == i - 1:
                 outputs.append(self._pool.starmap_async(partial_retrive_batch, inputs[x * self._num_processes:]))
             else:
@@ -85,7 +84,6 @@ class ImageSequenceIterator():
         for output in outputs:
             for batch in output.get():
                 index, images, labels = batch
-                print(index)
                 for image, label in zip(images, labels):
                     batched_frames[current_index, :, :, :] = transform(image)
                     batched_labels[current_index] = label
