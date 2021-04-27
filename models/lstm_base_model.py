@@ -53,7 +53,7 @@ class LSTM_Base_Model(nn.Module):
 
     def train_model(self, training_generator, device, optimizer, criterion, epoch):
         current_loss = 0.0
-        num_frames = 0.0
+        num_labels = 0.0
         num_videos = 0.0
         correct_labels = 0.0
         for i, data in enumerate(training_generator, 0):
@@ -63,13 +63,13 @@ class LSTM_Base_Model(nn.Module):
             # zero the parameter gradients
             optimizer.zero_grad()
             for inputs, labels in data.batchiter():
-                inputs, labels = inputs.to(device), labels.to(device)
+                inputs, labels = inputs.clone().to(device), labels.to(device)
                 # forward + backward + optimize
                 outputs = self(inputs)
                 loss += criterion(outputs, labels)
 
                 # print statistics
-                num_frames += labels.shape[0]
+                num_labels += labels.shape[0]
                 current_loss += loss.item()         
                 correct_labels += (labels == torch.argmax(outputs, dim=1)).float().sum()
             loss.backward()
@@ -77,10 +77,10 @@ class LSTM_Base_Model(nn.Module):
             logging.info('[%d, %5d] loss: %.3f' %
                     (epoch + 1, i, loss))
             num_videos += 1
-        return current_loss / num_videos, correct_labels / num_frames
+        return current_loss / num_videos, correct_labels / num_labels
 
     
-    def evaluate_model(model, evaluation_generator, device, criterion):
+    def evaluate_model(self, evaluation_generator, device, criterion):
         num_labels = 0.0
         correct_labels = 0.0
         loss = 0.0
@@ -93,6 +93,6 @@ class LSTM_Base_Model(nn.Module):
                     outputs = self(inputs)
                     loss += criterion(outputs, labels)
                     correct_labels += (labels == torch.argmax(outputs, dim=1)).float().sum()
-                    num_frames += labels.shape[0]
+                    num_labels += labels.shape[0]
                 num_videos += 1
-        return loss / num_videos, correct_labels / num_frames
+        return loss / num_videos, correct_labels / num_labels

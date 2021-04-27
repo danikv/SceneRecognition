@@ -7,7 +7,7 @@ import logging
 
 class CNN_Resnet_Model(nn.Module):
     def __init__(self, num_classes):
-        super(CNN_Resnet_Model, self).__init__()
+        super().__init__()
         self._resnet101 = models.resnet101(pretrained=True)
         for param in self._resnet101.parameters():
             param.requires_grad = False
@@ -24,7 +24,7 @@ class CNN_Resnet_Model(nn.Module):
         x = F.relu(self._fc2(x))
         x = self._dropout(x)
         x = F.relu(self._fc3(x))
-        return F.relu(self._fc4(x))
+        return self._fc4(x)
 
 
     def train_model(self, training_generator, device, optimizer, criterion, epoch):
@@ -35,17 +35,17 @@ class CNN_Resnet_Model(nn.Module):
         for i, data in enumerate(training_generator, 0):
             running_loss = 0.0
             for inputs, labels in data.batchiter():
-                inputs, labels = inputs.to(device), labels.to(device)
-
                 # zero the parameter gradients
                 optimizer.zero_grad()
+                inputs, labels = inputs.to(device), labels.to(device)
+
                 # forward + backward + optimize
 
                 outputs = self(inputs)
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
-
+                
                 # print statistics
                 num_frames += labels.shape[0]
                 current_loss += loss.item()

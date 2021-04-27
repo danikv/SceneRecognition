@@ -29,6 +29,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_save_path', help='path for model saving')
     parser.add_argument('--model_prefix', help='model prefix for saving')
     parser.add_argument('--model_class', help='model class')
+    parser.add_argument('--lr', type=int, help='learning rate')
 
     args = parser.parse_args()
 
@@ -43,6 +44,7 @@ if __name__ == "__main__":
     model_path = args.model_save_path
     model_prefix = args.model_prefix
     model_class = getattr(import_module('models.{}'.format(args.model_class.lower())), args.model_class)
+    lr = args.lr
 
     logging.basicConfig(filename=logging_output_file, filemode='w', format='%(asctime)s %(levelname)-8s %(message)s', level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -75,7 +77,7 @@ if __name__ == "__main__":
     model.to(device)
 
     criterion = nn.CrossEntropyLoss().cuda()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
     model.train(True)
     
     #start training

@@ -24,14 +24,12 @@ class ImageSequenceDataset():
         self._batch_size = batch_size
         
     def __iter__(self):
-        batched_frames = torch.cuda.FloatTensor(self._batch_size, 3, 224, 224)
-        batched_labels = torch.cuda.LongTensor(self._batch_size)
         shuffle(self._dataset)
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._num_processes) as executor:
             for video_num, labels in self._dataset:
                 image_sequence_folder = os.path.join(self._video_folder, 'video_{}'.format(video_num))
                 logging.debug('starting video {}, num frames : {}'.format(video_num, labels['num_frames']))
-                yield ImageSequenceIterator(image_sequence_folder, labels, self._num_processes, executor, self._batch_size, batched_frames, batched_labels)
+                yield ImageSequenceIterator(image_sequence_folder, labels, self._num_processes, executor, self._batch_size)
 
 def generate_labels(labels_in_frames, video_frame_index):
     for label in labels_in_frames:
@@ -51,17 +49,17 @@ def retrive_batch(start_index, end_index, labels, image_sequence_folder):
     return frames, frame_labels
 
 class ImageSequenceIterator():
-    def __init__(self, image_sequence_folder, labels, num_processes, pool, batch_size, batched_frames, batched_labels):
+    def __init__(self, image_sequence_folder, labels, num_processes, pool, batch_size):
         self._image_sequence_folder = image_sequence_folder
         self._labels = labels
         self._num_processes = num_processes
         self._number_of_frames = labels['num_frames']
         self._pool = pool
         self._batch_size = batch_size
-        self._batched_frames = batched_frames
-        self._batched_labels = batched_labels
 
     def batchiter(self):
+        batched_frames = torch.cuda.FloatTensor(self._batch_size, 3, 224, 224)
+        batched_labels = np.ndarray((self._batch_size), dtype=np.int64)
         process_batch = int(self._batch_size / self._num_processes)
         current_index = 0
         inputs = []
@@ -76,11 +74,11 @@ class ImageSequenceIterator():
         for output in results:
             images, labels = output
             for image, label in zip(images, labels):
-                self._batched_frames[current_index, :, :, :] = image
-                self._batched_labels[current_index] = label
+                batched_frames[current_index, :, :, :] = image
+                batched_labels[current_index] = label
                 current_index += 1
             if current_index == self._batch_size:
-                yield self._batched_frames, self._batched_labels
+                yield batched_frames, torch.from_numpy(batched_labels)
                 current_index = 0
         if current_index != 0:
-            yield self._batched_frames.narrow(0, 0, current_index), self._batched_labels.narrow(0, 0, current_index)
+            yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])
