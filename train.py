@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_save_path', help='path for model saving')
     parser.add_argument('--model_prefix', help='model prefix for saving')
     parser.add_argument('--model_class', help='model class')
-    parser.add_argument('--lr', type=int, help='learning rate')
+    parser.add_argument('--lr', type=float, help='learning rate')
 
     args = parser.parse_args()
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
            torch.save(model.state_dict(), os.path.join(model_path, '{}-{}.model'.format(model_prefix, best_accuracy)))
         logging.info(evaluation_data)
         logging.info(train_data)
-    test_data = evaluate_model(model, dataset_test, device, criterion)
+    test_data = model.evaluate_model(dataset_test, device, criterion)
 
     file_data = {}
     file_data['test__data'] = test_data

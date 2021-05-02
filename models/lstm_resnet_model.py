@@ -36,7 +36,6 @@ class LSTM_Resnet_Model(nn.Module):
         self._hidden = hidden
         x = x.reshape(-1, self._hidden_dim)
         x = F.relu(self._fc2(x))
-        x = self._batch(x)
         x = self._dropout(x)
         x = F.relu(self._fc3(x))
         return self._fc4(x)
@@ -64,6 +63,7 @@ class LSTM_Resnet_Model(nn.Module):
                 current_loss += loss.item()         
                 correct_labels += (labels == torch.argmax(outputs, dim=1)).float().sum()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.parameters(), 1)
             optimizer.step()
             logging.info('[%d, %5d] loss: %.3f' %
                     (epoch + 1, i, loss))

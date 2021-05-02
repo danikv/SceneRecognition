@@ -39,7 +39,7 @@ class CNN_Base_Model(nn.Module):
         x = self._dropout2(x)
         x = F.relu(self._fc3(x))
         x = F.relu(self._fc4(x))
-        return F.relu(self._fc5(x))
+        return self._fc5(x)
 
 
     def train_model(self, training_generator, device, optimizer, criterion, epoch):

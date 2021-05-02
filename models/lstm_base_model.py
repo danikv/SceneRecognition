@@ -45,10 +45,9 @@ class LSTM_Base_Model(nn.Module):
         self._hidden = hidden
         x = x.reshape(-1, self._hidden_dim)
         x = F.relu(self._fc2(x))
-        x = self._batch(x)
         x = self._dropout(x)
         x = F.relu(self._fc3(x))
-        return F.relu(self._fc4(x))
+        return self._fc4(x)
 
 
     def train_model(self, training_generator, device, optimizer, criterion, epoch):
