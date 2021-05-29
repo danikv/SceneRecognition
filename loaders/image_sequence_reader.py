@@ -8,8 +8,24 @@ import cv2
 import concurrent.futures
 import logging
 
-transform = transforms.Compose([transforms.ToTensor(),
-                                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+def generate_feature_maps_dataset(dataset, folder):
+    generated_dataset = []
+    for video_num, labels in dataset:
+        image_sequence_folder = os.path.join(folder, 'video_{}'.format(video_num))
+        videos_tensor = torch.FloatTensor(labels['num_frames'], 2048)
+        labels_tensor = np.ndarray((labels['num_frames']), dtype=np.int64)
+        for i in range(1, labels['num_frames'] + 1):
+            feature_map_path = os.path.join(image_sequence_folder, 'video-{:05d}'.format(i))
+            videos_tensor[i-1] = torch.squeeze(torch.load(feature_map_path))
+            labels_tensor[i-1] = generate_labels(labels['labels'], i)
+        generated_dataset.append((videos_tensor, labels_tensor))
+    return generated_dataset
+
+def generate_labels(labels_in_frames, video_frame_index):
+    for label in labels_in_frames:
+        if int(label[1]) <= video_frame_index <= int(label[2]):
+            return 1
+    return 0
 
 def class_labels_into_one_hot(labels):
     if not labels:
@@ -31,20 +47,14 @@ class ImageSequenceDataset():
                 logging.debug('starting video {}, num frames : {}'.format(video_num, labels['num_frames']))
                 yield ImageSequenceIterator(image_sequence_folder, labels, self._num_processes, executor, self._batch_size)
 
-def generate_labels(labels_in_frames, video_frame_index):
-    for label in labels_in_frames:
-        if int(label[1]) <= video_frame_index <= int(label[2]):
-            return 1
-    return 0
-
 def retrive_batch(start_index, end_index, labels, image_sequence_folder):
     frames = []
     frame_labels = []
     for i in range(start_index, end_index):
-        image_path = os.path.join(image_sequence_folder, 'video-{:09d}.png'.format(i))
+        image_path = os.path.join(image_sequence_folder, 'video-{:05d}.png'.format(i))
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        frames.append(transform(cv2.resize(image, (224, 224)) / 255))
+        frames.append(transform(image))
         frame_labels.append(generate_labels(labels['labels'], i))
     return frames, frame_labels
 
@@ -75,10 +85,14 @@ class ImageSequenceIterator():
             images, labels = output
             for image, label in zip(images, labels):
                 batched_frames[current_index, :, :, :] = image
+                #images.append(image)
                 batched_labels[current_index] = label
                 current_index += 1
             if current_index == self._batch_size:
                 yield batched_frames, torch.from_numpy(batched_labels)
+                #yield images, torch.from_numpy(batched_labels)
                 current_index = 0
         if current_index != 0:
             yield batched_frames.narrow(0, 0, current_index), torch.from_numpy(batched_labels[:current_index])
+            #yield images, torch.from_numpy(batched_labels[:current_index])
+            
