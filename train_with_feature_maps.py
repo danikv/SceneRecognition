@@ -18,6 +18,7 @@ import logging
 from importlib import import_module
 from matplotlib import pyplot as plt
 import itertools
+from sklearn.model_selection import KFold
 from torch.utils.tensorboard import SummaryWriter
 
 classes = ['normal', 'anomaly']
@@ -51,9 +52,9 @@ if __name__ == "__main__":
     stats_file = args.stats_file
     prefix_path = args.model_save_path
     #model_class = getattr(import_module('models.{}'.format(args.model_class.lower())), args.model_class)
-    lr_list = [0.0001, 0.001, 0.01]
-    clip_list = [1, 0.5, 0.1]
-    hidden_dim_list = [2048, 4096, 8192]
+    lr_list = [0.0001, 0.00005]
+    clip_list = [0.5, 0.1]
+    hidden_dim_list = [2048, 4096]
 
     logging.basicConfig(filename=logging_output_file, filemode='w', format='%(asctime)s %(levelname)-8s %(message)s', level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -63,41 +64,40 @@ if __name__ == "__main__":
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    train, evaluation = train_test_split(train, test_size=0.2)
-
-    bla = generate_feature_maps_dataset(train, videos_folder)
-    print(len(bla))
-
-    train = DataLoader(generate_feature_maps_dataset(train, videos_folder), shuffle=True, batch_size=1)
-
-    evaluation = DataLoader(generate_feature_maps_dataset(evaluation, videos_folder), shuffle=True, batch_size=1)
+    kf = KFold(n_splits=4)
+    train_dataset = generate_feature_maps_dataset(train, videos_folder)
 
 
     logging.info('start training')
     best_model_path = None
     for lr, hidden_dim, clip in itertools.product(lr_list, hidden_dim_list, clip_list):
-        comment = f'gradient_clip = {clip} lr = {lr} hidden_dim = {hidden_dim} ephochs = {epochs}'
-        tb = SummaryWriter(log_dir=os.path.join(stats_file, comment))
-        model = LSTM_Resnet_Model(2, hidden_dim=hidden_dim)
-        model.to(device)
+        for train_name_index, val_name_index in kf.split(train_dataset):
+            current_train, current_val = train_dataset[train_name_index], train_dataset[val_name_index]
+            new_train = DataLoader(current_train, shuffle=True)
 
-        criterion = nn.CrossEntropyLoss().cuda()
-        optimizer = optim.Adam(model.parameters(), lr=lr)
-        model.train(True)
-        best_accuracy = 0
-        logging.info('stating with hypter params , lr {} , hidden_dim {} , clip {}'.format(lr, hidden_dim, clip))
-        model_path = '{}-{}-{}-{}.model'.format(prefix_path, lr, hidden_dim, clip)
-        for epoch in range(epochs):  # loop over the dataset multiple times
-            logging.info('starting epoch {}'.format(epoch))
-            train_metrics = model.train_model_feature_maps(train, device, optimizer, criterion, clip)
-            #calculate accuracy over the evaluation dataset
-            val_metrics = model.evaluate_model_feature_maps(evaluation, device, criterion)
-            if val_metrics[1] > best_accuracy:
-                best_accuracy = val_metrics[1]
-                torch.save(model.state_dict(), model_path)
-            tb.add_scalar("Train Loss", train_metrics[0], epoch)
-            tb.add_scalar("Train Accuracy", train_metrics[1], epoch)
-            tb.add_scalar("Validation Loss", val_metrics[0], epoch)
-            tb.add_scalar("Validation Accuracy", val_metrics[1], epoch)
+            current_val = DataLoader(current_val, shuffle=True, batch_size=1)
+            comment = f'gradient_clip = {clip} lr = {lr} hidden_dim = {hidden_dim} ephochs = {epochs}'
+            tb = SummaryWriter(log_dir=os.path.join(stats_file, comment))
+            model = LSTM_Resnet_Model(2, hidden_dim=hidden_dim)
+            model.to(device)
+
+            criterion = nn.CrossEntropyLoss().cuda()
+            optimizer = optim.Adam(model.parameters(), lr=lr)
+            model.train(True)
+            best_accuracy = 0
+            logging.info('stating with hypter params , lr {} , hidden_dim {} , clip {}'.format(lr, hidden_dim, clip))
+            model_path = '{}-{}-{}-{}.model'.format(prefix_path, lr, hidden_dim, clip)
+            for epoch in range(epochs):  # loop over the dataset multiple times
+                logging.info('starting epoch {}'.format(epoch))
+                train_metrics = model.train_model_feature_maps(current_train, device, optimizer, criterion, clip)
+                #calculate accuracy over the evaluation dataset
+                val_metrics = model.evaluate_model_feature_maps(current_val, device, criterion)
+                if val_metrics[1] > best_accuracy:
+                    best_accuracy = val_metrics[1]
+                    torch.save(model.state_dict(), model_path)
+                tb.add_scalar("Train Loss", train_metrics[0], epoch)
+                tb.add_scalar("Train Accuracy", train_metrics[1], epoch)
+                tb.add_scalar("Validation Loss", val_metrics[0], epoch)
+                tb.add_scalar("Validation Accuracy", val_metrics[1], epoch)
 
     print('Finished Training')
