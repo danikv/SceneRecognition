@@ -13,10 +13,8 @@ import torch.optim as optim
 import torch.nn as nn
 from loaders.image_sequence_reader import ImageSequenceDataset, generate_feature_maps_dataset, generate_labels
 import argparse
-from sklearn.model_selection import train_test_split
 import logging
 from importlib import import_module
-from matplotlib import pyplot as plt
 import itertools
 from sklearn.model_selection import KFold
 from torch.utils.tensorboard import SummaryWriter
