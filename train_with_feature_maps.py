@@ -41,8 +41,6 @@ if __name__ == "__main__":
 
 
     dataset_folder = args.dataset
-    labels_folder = os.path.join(dataset_folder, 'Preprocessed-Labels')
-    videos_folder = os.path.join(dataset_folder, 'Videos-Images-1fps-FeatureMaps')
     epochs = args.epochs
     batch_size = args.batch_size
     num_processes = args.num_processes
@@ -54,6 +52,8 @@ if __name__ == "__main__":
     lr_list = [0.0001, 0.00005]
     clip_list = [0.5, 0.1]
     hidden_dim_list = [2048, 4096]
+    labels_folder = os.path.join(dataset_folder, 'Preprocessed-Labels')
+    videos_folder = os.path.join(dataset_folder, f'Videos-Images-{fps}fps-FeatureMaps')
 
     logging.basicConfig(filename=logging_output_file, filemode='w', format='%(asctime)s %(levelname)-8s %(message)s', level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -76,7 +76,7 @@ if __name__ == "__main__":
             current_train = DataLoader(current_train, shuffle=True, batch_size=1)
             current_val = DataLoader(current_val, shuffle=True, batch_size=1)
 
-            comment = f'gradient_clip = {clip} lr = {lr} hidden_dim = {hidden_dim} ephochs = {epochs} cross_val = {index}'
+            comment = f'gradient_clip = {clip} lr = {lr} hidden_dim = {hidden_dim} ephochs = {epochs} cross_val = {index} frames = {frames} fps = {fps}'
             tb = SummaryWriter(log_dir=os.path.join(stats_file, comment))
             model = LSTM_Resnet_Model(2, hidden_dim=hidden_dim)
             model.to(device)
