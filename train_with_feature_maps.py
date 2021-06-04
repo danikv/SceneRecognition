@@ -72,7 +72,7 @@ if __name__ == "__main__":
     for lr, hidden_dim, clip in itertools.product(lr_list, hidden_dim_list, clip_list):
         for index , (train_index, val_index) in enumerate(kf.split(train_dataset)):
             current_train = [train_dataset[i] for i in train_index]
-            current_val = [current_val[i] for i in val_index]
+            current_val = [train_dataset[i] for i in val_index]
             current_train = DataLoader(current_train, shuffle=True, batch_size=1)
             current_val = DataLoader(current_val, shuffle=True, batch_size=1)
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
             model.train(True)
             best_accuracy = 0
             logging.info('stating with hypter params , lr {} , hidden_dim {} , clip {}, cross_val = {}'.format(lr, hidden_dim, clip, index))
-            model_path = '{}-{}-{}-{}.model'.format(prefix_path, lr, hidden_dim, clip)
+            model_path = '{}-{}-{}-{}-{}-{}.model'.format(prefix_path, lr, hidden_dim, clip, fps, frames)
             for epoch in range(epochs):  # loop over the dataset multiple times
                 logging.info('starting epoch {}'.format(epoch))
                 train_metrics = model.train_model_feature_maps(current_train, device, optimizer, criterion, clip)
