@@ -7,7 +7,7 @@ import logging
 from graphviz import Digraph
 
 class LSTM_Resnet_Model(nn.Module):
-    def __init__(self, num_classes, hidden_dim=8192, num_layers=1):
+    def __init__(self, num_classes, intput_features, hidden_dim=8192, num_layers=1):
         super(LSTM_Resnet_Model, self).__init__()
         # self._resnet101 = models.resnet101(pretrained=True)
         # for param in self._resnet101.parameters():
@@ -16,6 +16,7 @@ class LSTM_Resnet_Model(nn.Module):
         # self._resnet101.fc = nn.Linear(in_features, 512)
         # self._layer_dim = num_layers
         self._num_classes = num_classes
+        self._fc0 = nn.Linear(intput_features, 2048)
         self._lstm = nn.LSTM(2048, hidden_dim, num_layers, dropout=0.2, batch_first=True)
         self._hidden_dim = hidden_dim
         self._fc1 = nn.Linear(hidden_dim, 1024)
@@ -34,6 +35,7 @@ class LSTM_Resnet_Model(nn.Module):
     def forward(self, x):
         #x = F.relu(self._resnet101(x)).view(-1, 1, 512)
         seq_len = x.shape[1]
+        x = F.relu(self._fc0(x))
         x, _ = self._lstm(x)
         #self._hidden = hidden
         x = x.view(-1, seq_len, self._hidden_dim)

@@ -32,6 +32,7 @@ if __name__ == "__main__":
     parser.add_argument('--logger_file', help='output file for loggings')
     parser.add_argument('--model_save_path', help='path for model saving')
     parser.add_argument('--stats_file', help='path for tensor board')
+    parser.add_argument('--input_features', type=int, help='fps for video')
     parser.add_argument('--frames', type=int, help='number of frames in video')
     parser.add_argument('--fps', type=int, help='fps for video')
 
@@ -47,6 +48,7 @@ if __name__ == "__main__":
     prefix_path = args.model_save_path
     frames = args.frames
     fps = args.fps
+    input_features = args.input_features
     lr_list = [0.0001, 0.00005]
     clip_list = [0.5, 0.1]
     hidden_dim_list = [2048, 4096]
@@ -76,7 +78,7 @@ if __name__ == "__main__":
 
             comment = f'gradient_clip = {clip} lr = {lr} hidden_dim = {hidden_dim} ephochs = {epochs} cross_val = {index} frames = {frames} fps = {fps}'
             tb = SummaryWriter(log_dir=os.path.join(stats_file, comment))
-            model = LSTM_Resnet_Model(2, hidden_dim=hidden_dim)
+            model = LSTM_Resnet_Model(2, input_features, hidden_dim=hidden_dim)
             model.to(device)
 
             criterion = nn.CrossEntropyLoss().cuda()
