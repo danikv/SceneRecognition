@@ -22,13 +22,14 @@ def normalize_image(x):
 
 class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
 
-    def __init__(self, data_path, clip_duration, batch_size, num_workers):
+    def __init__(self, data_path, clip_duration, batch_size, num_workers, subsample):
         # Dataset configuration
         super().__init__()
         self._data_path = data_path
         self._clip_duration = clip_duration
         self._batch_size = batch_size
         self._num_workers = num_workers
+        self._subsample = subsample
 
     def train_dataloader(self):
         """
@@ -39,7 +40,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
               key="video",
               transform=Compose(
                   [
-                    UniformTemporalSubsample(8),
+                    UniformTemporalSubsample(self._subsample),
                     Lambda(normalize_image),
                     Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
                     RandomShortSideScale(min_size=256, max_size=320),
@@ -60,7 +61,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self._batch_size,
-            num_workers=self._num_workers,
+            #num_workers=self._num_workers,
         )
 
     def val_dataloader(self):
@@ -76,5 +77,5 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self._batch_size,
-            num_workers=self._num_workers,
+            #num_workers=self._num_workers,
         )
