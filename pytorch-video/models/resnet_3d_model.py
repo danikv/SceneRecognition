@@ -29,17 +29,19 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
       # Compute cross entropy loss, loss.backwards will be called behind the scenes
       # by PyTorchLightning after being returned from this method.
-      loss = F.cross_entropy(y_hat, torch.unsqueeze(torch.max(batch["label"]), 0).long())
+      y_true, _ = torch.max(batch["label"], dim=1)
+      loss = F.cross_entropy(y_hat, y_true.long())
 
       # Log the train loss to Tensorboard
-      self.log("train_loss", loss.item())
+      self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
       return loss
 
   def validation_step(self, batch, batch_idx):
       y_hat = self.model(batch["video"])
 
-      loss = F.cross_entropy(y_hat, torch.unsqueeze(torch.max(batch["label"]), 0).long())
+      y_true, _ = torch.max(batch["label"], dim=1)
+      loss = F.cross_entropy(y_hat, y_true.long())
       self.log("val_loss", loss)
       return loss
 
