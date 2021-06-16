@@ -5,12 +5,13 @@ import os
 import json
 import pandas as pd
 from copy import deepcopy
+from sklearn.model_selection import train_test_split
 
 parser = argparse.ArgumentParser(description='convert video time labels into frame labales')
 parser.add_argument('--labels_folder', help='labels folder')
 parser.add_argument('--videos_folder', help='videos folder')
 parser.add_argument('--fps', type=int, help='frames per second when converting video to images')
-parser.add_argument('--output_file', help='features output file')
+parser.add_argument('--output_folder', help='features output folder')
 
 LABEL_MAP = {
     "none": 0,
@@ -30,7 +31,6 @@ LABEL_MAP = {
 
 args = parser.parse_args()
 labels_folder = args.labels_folder
-videos_folder = args.videos_folder
 fps = args.fps
 
 dataset = []
@@ -43,6 +43,9 @@ for (dirpath, dirnames, filenames) in os.walk(labels_folder):
             current_video['id'] = number
             current_video['file_path'] = f'video_{number}.mp4'
             labels_as_frames = []
+            # if not labels:
+            #     dataset.append(current_video)
+            # else:
             for label in labels:
                 start_time_min, start_time_sec = utils.parse_time(label[1])
                 end_time_min, end_time_sec = utils.parse_time(label[2])
@@ -55,7 +58,18 @@ for (dirpath, dirnames, filenames) in os.walk(labels_folder):
                 dataset.append(deepcopy(current_video))
 
 dataframe = pd.DataFrame(dataset)
-dataframe.to_csv(args.output_file)
+number_of_videos = len(dataframe.groupby('id'))
+print(number_of_videos)
+train, test = train_test_split([i for i in range(number_of_videos)], test_size=0.2)
+train, val = train_test_split(train, test_size=0.25)
 
+
+train = dataframe[dataframe['id'].isin(train)]
+val = dataframe[dataframe['id'].isin(val)]
+test = dataframe[dataframe['id'].isin(test)]
+
+train.to_csv(os.path.join(args.output_folder, 'ucf_crime_train.csv'))
+val.to_csv(os.path.join(args.output_folder, 'ucf_crime_val.csv'))
+test.to_csv(os.path.join(args.output_folder, 'ucf_crime_test.csv'))
 
 

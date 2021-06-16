@@ -14,7 +14,7 @@ def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_
                             save_top_k=3,
                             mode='min')
     logger = TensorBoardLogger(stats_file, name="resnet-3d-ucf-crime")
-    trainer = pytorch_lightning.Trainer(logger=logger, callbacks=[checkpoint_callback],  min_epochs=min_ephocs)
+    trainer = pytorch_lightning.Trainer(logger=logger, gpus=1, callbacks=[checkpoint_callback],  min_epochs=min_ephocs)
     trainer.fit(classification_module, data_module)
 
 

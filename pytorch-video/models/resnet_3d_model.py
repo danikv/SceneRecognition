@@ -8,7 +8,7 @@ def make_kinetics_resnet():
   return pytorchvideo.models.resnet.create_resnet(
       input_channel=3, # RGB input from Kinetics
       model_depth=50, # For the tutorial let's just use a 50 layer network
-      model_num_class=2,
+      model_num_class=11,
       norm=nn.BatchNorm3d,
       activation=nn.ReLU,
   )
@@ -17,6 +17,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
   def __init__(self):
       super().__init__()
       self.model = make_kinetics_resnet()
+      print(self.model)
 
   def forward(self, x):
       return self.model(x)
@@ -28,7 +29,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
       # Compute cross entropy loss, loss.backwards will be called behind the scenes
       # by PyTorchLightning after being returned from this method.
-      loss = F.cross_entropy(y_hat, batch["label"])
+      loss = F.cross_entropy(y_hat, torch.unsqueeze(torch.max(batch["label"]), 0).long())
 
       # Log the train loss to Tensorboard
       self.log("train_loss", loss.item())
@@ -37,7 +38,8 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
   def validation_step(self, batch, batch_idx):
       y_hat = self.model(batch["video"])
-      loss = F.cross_entropy(y_hat, batch["label"])
+
+      loss = F.cross_entropy(y_hat, torch.unsqueeze(torch.max(batch["label"]), 0).long())
       self.log("val_loss", loss)
       return loss
 

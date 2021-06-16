@@ -39,7 +39,6 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
               key="video",
               transform=Compose(
                   [
-                    UniformTemporalSubsample(8),
                     Lambda(normalize_image),
                     Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
                     RandomShortSideScale(min_size=256, max_size=320),
@@ -51,8 +50,8 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
             ]
         )
         train_dataset = pytorchvideo.data.UCFCrimeDataset(
-            'D:\\Dataset\\ucf_crime.csv',
-            'D:\\Dataset\\Videos',
+            os.path.join(self._data_path, 'ucf_crime_train.csv'),
+            os.path.join(self._data_path, 'Videos'),
             pytorchvideo.data.make_clip_sampler("uniform", self._clip_duration),
             decode_audio=False,
             transform=train_transform,
@@ -60,15 +59,15 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self._batch_size,
-            num_workers=self._num_workers,
+            #num_workers=self._num_workers,
         )
 
     def val_dataloader(self):
         """
         """
         train_dataset = pytorchvideo.data.UCFCrimeDataset(
-            'D:\\Dataset\\ucf_crime.csv',
-            'D:\\Dataset\\Videos',
+            os.path.join(self._data_path, 'ucf_crime_val.csv'),
+            os.path.join(self._data_path, 'Videos'),
             pytorchvideo.data.make_clip_sampler("uniform", self._clip_duration),
             decode_audio=False,
             transform=None,
@@ -76,5 +75,5 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self._batch_size,
-            num_workers=self._num_workers,
+            #num_workers=self._num_workers,
         )
