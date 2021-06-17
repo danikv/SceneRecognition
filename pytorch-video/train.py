@@ -8,17 +8,14 @@ from pytorch_lightning.loggers import TensorBoardLogger
 def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_duration, model_save_dir, subsampled_frames):
     model = VideoClassificationLightningModule()
     data_module = UCFCrimeDataModule(dataset_folder, clip_duration, batch_size, num_workers, subsampled_frames)
-    trainer = pytorch_lightning.Trainer(auto_lr_find="_learning_rate", gpus=1)
-    trainer.tune(model, data_module)
-
     checkpoint_callback = ModelCheckpoint(monitor='val_loss',
-                            dirpath=f"{model_save_dir}-{clip_duration}-{subsampled_frames}-{model._learning_rate:.5f}",
-                            filename='resnet-3d-ucf-crime-{epoch:02d}-{val_loss:.2f}',
-                            save_top_k=3,
-                            mode='min')
-    logger = TensorBoardLogger(f"{stats_file}-{clip_duration}-{subsampled_frames}-{model._learning_rate:.5f}", name="resnet-3d-ucf-crime")
-
-    trainer = pytorch_lightning.Trainer(logger=logger, gpus=1, callbacks=[checkpoint_callback],  min_epochs=min_ephocs)
+                        dirpath=f"{model_save_dir}-{clip_duration}-{subsampled_frames}",
+                        filename='resnet-3d-ucf-crime-{epoch:02d}-{val_loss:.2f}',
+                        save_top_k=3,
+                        mode='min')
+    logger = TensorBoardLogger(f"{stats_file}-{clip_duration}-{subsampled_frames}", name="resnet-3d-ucf-crime")
+    trainer = pytorch_lightning.Trainer(logger=logger, gpus=1, callbacks=[checkpoint_callback],  min_epochs=min_ephocs, auto_lr_find='_learning_rate')
+    trainer.tune(model, data_module)
     trainer.fit(model, data_module)
 
 
