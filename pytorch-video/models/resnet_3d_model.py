@@ -15,14 +15,14 @@ def make_kinetics_resnet():
   )
 
 class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
-  def __init__(self):
+  def __init__(self, learning_rate):
       super().__init__()
       self._model = make_kinetics_resnet()
       self._train_acc = torchmetrics.Accuracy(num_classes=11)
       self._val_acc = torchmetrics.Accuracy(num_classes=11)
       self._train_map = torchmetrics.Accuracy(num_classes=11, average='macro')
       self._val_map = torchmetrics.Accuracy(num_classes=11, average='macro')
-      self._learning_rate = 0
+      self._learning_rate = learning_rate
 
   def forward(self, x):
       return self._model(x)
@@ -63,5 +63,4 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       Setup the Adam optimizer. Note, that this function also can return a lr scheduler, which is
       usually useful for training video models.
       """
-      print(self._learning_rate)
       return torch.optim.Adam(self.parameters(), lr=self._learning_rate)
