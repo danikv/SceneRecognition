@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning
+import torchmetrics
 
 def make_kinetics_resnet():
   return pytorchvideo.models.resnet.create_resnet(
@@ -14,10 +15,14 @@ def make_kinetics_resnet():
   )
 
 class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
-  def __init__(self, learning_rate):
+  def __init__(self):
       super().__init__()
       self._model = make_kinetics_resnet()
-      self._lr = learning_rate
+      self._train_acc = torchmetrics.Accuracy(num_classes=11)
+      self._val_acc = torchmetrics.Accuracy(num_classes=11)
+      self._train_map = torchmetrics.Accuracy(num_classes=11, average='macro')
+      self._val_map = torchmetrics.Accuracy(num_classes=11, average='macro')
+      self._learning_rate = 0
 
   def forward(self, x):
       return self._model(x)
@@ -31,9 +36,12 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       # by PyTorchLightning after being returned from this method.
       y_true, _ = torch.max(batch["label"], dim=1)
       loss = F.cross_entropy(y_hat, y_true.long())
-
+      predictions = torch.argmax(y_hat, dim=1)
       # Log the train loss to Tensorboard
-      self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+      self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+      self._train_acc(predictions, y_true)
+      self.log('train_acc', self._train_acc, on_step=False, on_epoch=True)
+      self.log('train_MAP', self._train_map, on_step=False, on_epoch=True)
 
       return loss
 
@@ -42,7 +50,12 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
       y_true, _ = torch.max(batch["label"], dim=1)
       loss = F.cross_entropy(y_hat, y_true.long())
-      self.log("val_loss", loss)
+      predictions = torch.argmax(y_hat, dim=1)
+      self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)      
+      self._val_acc(predictions, y_true)
+      self._val_map(predictions, y_true)
+      self.log('val_acc', self._val_acc, on_step=False, on_epoch=True)
+      self.log('val_MAP', self._val_map, on_step=False, on_epoch=True)
       return loss
 
   def configure_optimizers(self):
@@ -50,4 +63,5 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       Setup the Adam optimizer. Note, that this function also can return a lr scheduler, which is
       usually useful for training video models.
       """
-      return torch.optim.Adam(self.parameters(), lr=self._lr)
+      print(self._learning_rate)
+      return torch.optim.Adam(self.parameters(), lr=self._learning_rate)

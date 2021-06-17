@@ -5,17 +5,21 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 import argparse
 from pytorch_lightning.loggers import TensorBoardLogger
   
-def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_duration, model_save_dir, subsampled_frames, learning_rate):
-    classification_module = VideoClassificationLightningModule(learning_rate)
+def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_duration, model_save_dir, subsampled_frames):
+    model = VideoClassificationLightningModule()
     data_module = UCFCrimeDataModule(dataset_folder, clip_duration, batch_size, num_workers, subsampled_frames)
+    trainer = pytorch_lightning.Trainer(auto_lr_find="_learning_rate", gpus=1)
+    trainer.tune(model, data_module)
+
     checkpoint_callback = ModelCheckpoint(monitor='val_loss',
-                            dirpath=model_save_dir,
+                            dirpath=f"{model_save_dir}-{clip_duration}-{subsampled_frames}-{model._learning_rate:.5f}",
                             filename='resnet-3d-ucf-crime-{epoch:02d}-{val_loss:.2f}',
                             save_top_k=3,
                             mode='min')
-    logger = TensorBoardLogger(stats_file, name="resnet-3d-ucf-crime")
+    logger = TensorBoardLogger(f"{stats_file}-{clip_duration}-{subsampled_frames}-{model._learning_rate:.5f}", name="resnet-3d-ucf-crime")
+
     trainer = pytorch_lightning.Trainer(logger=logger, gpus=1, callbacks=[checkpoint_callback],  min_epochs=min_ephocs)
-    trainer.fit(classification_module, data_module)
+    trainer.fit(model, data_module)
 
 
 if __name__ == "__main__":
@@ -28,7 +32,6 @@ if __name__ == "__main__":
     parser.add_argument('--stats_file', help='path for tensor board')
     parser.add_argument('--clip_duration', type=int, help='size of submpled clip from the original video')
     parser.add_argument('--subsampled_frames', type=int, help='size of sub submpled frames from the clip')
-    parser.add_argument('--lr', type=float, help='learning rate')
 
     args = parser.parse_args()
 
@@ -40,5 +43,4 @@ if __name__ == "__main__":
     prefix_path = args.model_save_path
     clip_duration = args.clip_duration
     subsampled_frames = args.subsampled_frames
-    lr = args.lr
-    train(epochs, dataset_folder, batch_size, num_processes, stats_file, clip_duration, prefix_path, subsampled_frames, lr)
+    train(epochs, dataset_folder, batch_size, num_processes, stats_file, clip_duration, prefix_path, subsampled_frames)

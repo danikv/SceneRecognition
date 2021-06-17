@@ -87,7 +87,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
             os.path.join(self._data_path, 'Videos'),
             pytorchvideo.data.make_clip_sampler("uniform", self._clip_duration),
             decode_audio=False,
-            transform=None,
+            transform=val_transform,
         )
         return torch.utils.data.DataLoader(
             val_dataset,
