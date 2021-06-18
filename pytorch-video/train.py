@@ -10,7 +10,7 @@ def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_
     data_module = UCFCrimeDataModule(dataset_folder, clip_duration, batch_size, num_workers, subsampled_frames)
     checkpoint_callback = ModelCheckpoint(monitor='val_loss',
                         dirpath=f"{model_save_dir}",
-                        filename='resnet-3d-{clip_duration}-{subsampled_frames}-{epoch:02d}-{val_loss:.2f}',
+                        filename='resnet-3d-{clip_duration}-{subsampled_frames}-{epoch:02d}-{val_loss:.2f}'.format(clip_duration=clip_duration, subsampled_frames=subsampled_frames),
                         save_top_k=3,
                         mode='min')
     logger = TensorBoardLogger(stats_file, name=f"resnet-3d-{clip_duration}-{subsampled_frames}-{learning_rate}")
