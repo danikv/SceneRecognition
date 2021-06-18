@@ -40,6 +40,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       # Log the train loss to Tensorboard
       self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
       self._train_acc(predictions, y_true)
+      self._train_map(predictions, y_true)
       self.log('train_acc', self._train_acc, on_step=False, on_epoch=True)
       self.log('train_MAP', self._train_map, on_step=False, on_epoch=True)
 
