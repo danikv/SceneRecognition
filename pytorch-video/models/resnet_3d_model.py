@@ -4,6 +4,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning
 import torchmetrics
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 
 def make_kinetics_resnet():
   return pytorchvideo.models.resnet.create_resnet(
@@ -18,10 +22,6 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
   def __init__(self, learning_rate):
       super().__init__()
       self._model = make_kinetics_resnet()
-      self._train_acc = torchmetrics.Accuracy(num_classes=11)
-      self._val_acc = torchmetrics.Accuracy(num_classes=11)
-      self._train_map = torchmetrics.Accuracy(num_classes=11, average='macro')
-      self._val_map = torchmetrics.Accuracy(num_classes=11, average='macro')
       self._learning_rate = learning_rate
 
   def forward(self, x):
@@ -38,13 +38,24 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       loss = F.cross_entropy(y_hat, y_true.long())
       predictions = torch.argmax(y_hat, dim=1)
       # Log the train loss to Tensorboard
-      self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-      self._train_acc(predictions, y_true)
-      self._train_map(predictions, y_true)
-      self.log('train_acc', self._train_acc, on_step=False, on_epoch=True)
-      self.log('train_MAP', self._train_map, on_step=False, on_epoch=True)
+      self.log('train loss per step', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)  
+      return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
-      return loss
+  def train_step_end(self, outputs):
+      preds = torch.cat([tmp['preds'] for tmp in outputs])
+      targets = torch.cat([tmp['target'] for tmp in outputs])
+      confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=11)
+      accuracy = torchmetrics.functional.accuracy(preds, targets)
+
+      df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(11), columns=range(11))
+      plt.figure(figsize = (10,7))
+      fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
+      plt.close(fig_)
+        
+      self.logger.experiment.add_figure("Train Confusion matrix", fig_, self.current_epoch)
+      self.logger.experiment.add_scalar("Train Loss per Epoch", np.mean(outputs['loss'], self.current_epoch))
+      self.logger.experiment.add_scalar("Train Accuracy per Epoch", accuracy, self.current_epoch)
+
 
   def validation_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
@@ -53,11 +64,46 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       loss = F.cross_entropy(y_hat, y_true.long())
       predictions = torch.argmax(y_hat, dim=1)
       self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)      
-      self._val_acc(predictions, y_true)
-      self._val_map(predictions, y_true)
-      self.log('val_acc', self._val_acc, on_step=False, on_epoch=True)
-      self.log('val_MAP', self._val_map, on_step=False, on_epoch=True)
-      return loss
+      return { 'loss': loss, 'preds': predictions, 'target': y_true}
+
+  def validation_step_end(self, outputs):
+      preds = torch.cat([tmp['preds'] for tmp in outputs])
+      targets = torch.cat([tmp['target'] for tmp in outputs])
+      confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=11)
+      accuracy = torchmetrics.functional.accuracy(preds, targets)
+
+      df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(11), columns=range(11))
+      plt.figure(figsize = (10,7))
+      fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
+      plt.close(fig_)
+        
+      self.logger.experiment.add_figure("Validation Confusion matrix", fig_, self.current_epoch)
+      self.logger.experiment.add_scalar("Validation Loss per Epoch", np.mean(outputs['loss'], self.current_epoch))
+      self.logger.experiment.add_scalar("Validation Accuracy per Epoch", accuracy, self.current_epoch)
+
+  def test_step(self, batch, batch_idx):
+      y_hat = self._model(batch["video"])
+
+      y_true, _ = torch.max(batch["label"], dim=1)
+      loss = F.cross_entropy(y_hat, y_true.long())
+      predictions = torch.argmax(y_hat, dim=1)    
+      return { 'loss': loss, 'preds': predictions, 'target': y_true}
+
+
+  def test_epoch_end(self, outputs):
+      preds = torch.cat([tmp['preds'] for tmp in outputs])
+      targets = torch.cat([tmp['target'] for tmp in outputs])
+      confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=11)
+      accuracy = torchmetrics.functional.accuracy(preds, targets)
+
+      df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(11), columns=range(11))
+      plt.figure(figsize = (10,7))
+      fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
+      plt.close(fig_)
+        
+      self.logger.experiment.add_figure("Test Confusion matrix", fig_, self.current_epoch)
+      self.logger.experiment.add_scalar("Test Loss per Epoch", np.mean(outputs['loss'], self.current_epoch))
+      self.logger.experiment.add_scalar("Test Accuracy per Epoch", accuracy, self.current_epoch)
 
   def configure_optimizers(self):
       """
