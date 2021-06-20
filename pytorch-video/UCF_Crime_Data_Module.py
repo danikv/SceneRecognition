@@ -62,7 +62,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self._batch_size,
-            #num_workers=self._num_workers,
+            num_workers=self._num_workers,
         )
 
     def val_dataloader(self):
@@ -92,7 +92,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             val_dataset,
             batch_size=1,
-            #num_workers=self._num_workers,
+            num_workers=self._num_workers,
         )
 
     def test_dataloader(self):
@@ -120,5 +120,5 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             val_dataset,
             batch_size=1,
-            #num_workers=self._num_workers,
+            num_workers=self._num_workers,
         )

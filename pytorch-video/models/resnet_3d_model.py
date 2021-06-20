@@ -67,19 +67,20 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
   def validation_step_end(self, outputs):
-      preds = torch.cat([tmp['preds'] for tmp in outputs])
-      targets = torch.cat([tmp['target'] for tmp in outputs])
-      confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=11)
-      accuracy = torchmetrics.functional.accuracy(preds, targets)
+      if isinstance(outputs, list):
+        preds = torch.cat([tmp['preds'] for tmp in outputs])
+        targets = torch.cat([tmp['target'] for tmp in outputs])
+        confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=11)
+        accuracy = torchmetrics.functional.accuracy(preds, targets)
 
-      df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(11), columns=range(11))
-      plt.figure(figsize = (10,7))
-      fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
-      plt.close(fig_)
-        
-      self.logger.experiment.add_figure("Validation Confusion matrix", fig_, self.current_epoch)
-      self.logger.experiment.add_scalar("Validation Loss per Epoch", np.mean(outputs['loss'], self.current_epoch))
-      self.logger.experiment.add_scalar("Validation Accuracy per Epoch", accuracy, self.current_epoch)
+        df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(11), columns=range(11))
+        plt.figure(figsize = (10,7))
+        fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
+        plt.close(fig_)
+            
+        self.logger.experiment.add_figure("Validation Confusion matrix", fig_, self.current_epoch)
+        self.logger.experiment.add_scalar("Validation Loss per Epoch", np.mean(outputs['loss'], self.current_epoch))
+        self.logger.experiment.add_scalar("Validation Accuracy per Epoch", accuracy, self.current_epoch)
 
   def test_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
