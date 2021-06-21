@@ -39,7 +39,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       predictions = torch.argmax(y_hat, dim=1)
       # Log the train loss to Tensorboard
       self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)  
-      return { 'preds': predictions, 'target': y_true}
+      return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
   def train_epoch_end(self, outputs):
       self.epoch_end_metrics(outputs, 'Train')
@@ -51,7 +51,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       loss = F.cross_entropy(y_hat, y_true.long())
       predictions = torch.argmax(y_hat, dim=1)
       self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)      
-      return { 'preds': predictions, 'target': y_true}
+      return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
   def validation_epoch_end(self, outputs):
       self.epoch_end_metrics(outputs, 'Validation')
@@ -63,7 +63,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       loss = F.cross_entropy(y_hat, y_true.long())
       predictions = torch.argmax(y_hat, dim=1)
       self.log('test_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)     
-      return { 'preds': predictions, 'target': y_true}
+      return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
 
   def test_epoch_end(self, outputs):
