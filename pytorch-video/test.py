@@ -21,4 +21,4 @@ data_module = UCFCrimeDataModule(data_path, clip_duration, 1, 1, 1)
 
 trainer = pytorch_lightning.Trainer(gpus=1)
 
-trainer.test(model=model, test_dataloaders=data_module.test_dataloader(), ckpt_path=model_path, verbose=True)
+trainer.test(model=model, test_dataloaders=data_module.test_data(), ckpt_path=model_path, verbose=True)
