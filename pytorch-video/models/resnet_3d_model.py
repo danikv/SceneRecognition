@@ -41,7 +41,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
   def train_epoch_end(self, outputs):
-      self.epoch_end_metrics(outputs)
+      self.epoch_end_metrics(outputs, 'Train')
 
   def validation_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
@@ -53,7 +53,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
   def validation_epoch_end(self, outputs):
-      self.epoch_end_metrics(outputs)
+      self.epoch_end_metrics(outputs, 'Validation')
 
   def test_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
@@ -65,7 +65,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
 
   def test_epoch_end(self, outputs):
-      self.epoch_end_metrics(outputs)
+      self.epoch_end_metrics(outputs, 'Test')
 
   def epoch_end_metrics(self, outputs, mode):
       preds = torch.cat([tmp['preds'] for tmp in outputs])
