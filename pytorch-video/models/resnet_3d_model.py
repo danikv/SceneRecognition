@@ -48,7 +48,10 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
   def training_epoch_end(self, outputs):
-      self.epoch_end_metrics(outputs, 'Train')
+      if self.current_epoch % 20 == 0:  
+        self.epoch_end_metrics(outputs, 'Train', True)
+      else:
+        self.epoch_end_metrics(outputs, 'Train', False)
 
   def validation_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
@@ -60,7 +63,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
   def validation_epoch_end(self, outputs):
-      self.epoch_end_metrics(outputs, 'Validation')
+      self.epoch_end_metrics(outputs, 'Validation', True)
 
   def test_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
@@ -73,15 +76,15 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
 
   def test_epoch_end(self, outputs):
-      self.epoch_end_metrics(outputs, 'Test')
+      self.epoch_end_metrics(outputs, 'Test', True)
 
-  def epoch_end_metrics(self, outputs, mode):
+  def epoch_end_metrics(self, outputs, mode, log_confusion_matrix):
       preds = torch.cat([tmp['preds'] for tmp in outputs])
       targets = torch.cat([tmp['target'] for tmp in outputs])
       confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=10)
       accuracy = torchmetrics.functional.accuracy(preds, targets)
 
-      if self.current_epoch % 10 == 0:  
+      if log_confusion_matrix:  
         df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(10), columns=range(10))
         plt.figure(figsize = (10,7))
         fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
