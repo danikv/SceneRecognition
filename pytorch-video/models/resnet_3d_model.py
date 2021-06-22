@@ -12,15 +12,21 @@ def make_kinetics_resnet():
   return pytorchvideo.models.resnet.create_resnet(
       input_channel=3, # RGB input from Kinetics
       model_depth=50, # For the tutorial let's just use a 50 layer network
-      model_num_class=11,
+      model_num_class=10,
       norm=nn.BatchNorm3d,
       activation=nn.ReLU,
   )
 
+def load_pretrained_model():
+  model_name = "slow_r50"
+  model = torch.hub.load("facebookresearch/pytorchvideo", model=model_name, pretrained=True)
+  model.blocks[-1].proj = nn.Linear(2048, 10)
+  return model
+
 class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
   def __init__(self, learning_rate):
       super().__init__()
-      self._model = make_kinetics_resnet()
+      self._model = load_pretrained_model()
       self._learning_rate = learning_rate
 
   def forward(self, x):
@@ -41,7 +47,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)  
       return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
-  def train_epoch_end(self, outputs):
+  def training_epoch_end(self, outputs):
       self.epoch_end_metrics(outputs, 'Train')
 
   def validation_step(self, batch, batch_idx):
@@ -72,11 +78,11 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
   def epoch_end_metrics(self, outputs, mode):
       preds = torch.cat([tmp['preds'] for tmp in outputs])
       targets = torch.cat([tmp['target'] for tmp in outputs])
-      confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=11)
+      confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=10)
       accuracy = torchmetrics.functional.accuracy(preds, targets)
 
       if self.current_epoch % 10 == 0:  
-        df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(11), columns=range(11))
+        df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(10), columns=range(10))
         plt.figure(figsize = (10,7))
         fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
         plt.close(fig_)

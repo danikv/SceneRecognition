@@ -33,7 +33,7 @@ dataset_path = args.dataset
 videos_prefix = args.videos_prefix
 
 dataset = read_videos_and_labels_from_csv(dataset_path, videos_prefix)
-classes_distribution = [0 for _ in range(11)]
+classes_distribution = [0 for _ in range(10)]
 
 for video_path, labels in dataset:
     _, frame_count = get_video_fps_and_duration(video_path)
