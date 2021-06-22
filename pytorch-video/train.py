@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 import argparse
 from pytorch_lightning.loggers import TensorBoardLogger
   
-def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_duration, model_save_dir, subsampled_frames, learning_rate):
+def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_duration, model_save_dir, subsampled_frames, learning_rate, check_val_every_n_epoch):
     model = VideoClassificationLightningModule(learning_rate)
     data_module = UCFCrimeDataModule(dataset_folder, clip_duration, batch_size, num_workers, subsampled_frames)
     base_filename = f'resnet-3d-{clip_duration}-{subsampled_frames}'
@@ -15,7 +15,7 @@ def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_
                         save_top_k=3,
                         mode='min')
     logger = TensorBoardLogger(stats_file, name=f"resnet-3d-{clip_duration}-{subsampled_frames}-{learning_rate}")
-    trainer = pytorch_lightning.Trainer(logger=logger, gpus=1, callbacks=[checkpoint_callback],  min_epochs=min_ephocs)
+    trainer = pytorch_lightning.Trainer(logger=logger, gpus=1, callbacks=[checkpoint_callback],  min_epochs=min_ephocs, check_val_every_n_epoch=check_val_every_n_epoch)
     trainer.fit(model, data_module)
 
 
@@ -30,6 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('--clip_duration', type=int, help='size of submpled clip from the original video')
     parser.add_argument('--subsampled_frames', type=int, help='size of sub submpled frames from the clip')
     parser.add_argument('--lr', type=float, help="learning rate of the model")
+    parser.add_argument('--check_val', type=int, help="how many train epochs until we check on the val data set")
 
     args = parser.parse_args()
 
@@ -42,4 +43,5 @@ if __name__ == "__main__":
     clip_duration = args.clip_duration
     subsampled_frames = args.subsampled_frames
     lr = args.lr
-    train(epochs, dataset_folder, batch_size, num_processes, stats_file, clip_duration, prefix_path, subsampled_frames, lr)
+    check_val_every_n_epoch = args.check_val
+    train(epochs, dataset_folder, batch_size, num_processes, stats_file, clip_duration, prefix_path, subsampled_frames, lr, check_val_every_n_epoch)
