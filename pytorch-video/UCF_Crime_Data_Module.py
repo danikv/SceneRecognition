@@ -1,13 +1,15 @@
+from typing import Callable, Dict, List, Optional, Tuple
 import os
 import pytorch_lightning
 import pytorchvideo.data
 import torch.utils.data
-import pandas as pd
+import numpy as np
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
     Normalize,
     RandomShortSideScale,
-    UniformTemporalSubsample
+    UniformTemporalSubsample,
+    UniformTemporalSubsampleOverMultipleKeys
 )
 
 from torchvision.transforms import (
@@ -19,6 +21,30 @@ from torchvision.transforms import (
 
 def normalize_image(x):
     return x / 255.0
+
+
+class RemoveTrainingExamplesByProbabilityAndCondition(torch.nn.Module):
+    """
+    subsample frames as in UniformTemporalSubsample but also uses the same indices for the labels.
+    usefull for subsampling frames where the labels are at frame level.
+    """
+
+    def __init__(self, probability: float, condition):
+        super().__init__()
+        self._probability = probability
+        self._condition = condition
+
+    def __call__(self, x: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Args:
+            x (Dict[str, torch.Tensor]): video clip dict.
+        """
+        samples = [0, 1]
+        if self._condition(x):
+          if np.random.choice(samples, p=[self._probability, 1 - self._probability]) == 0:
+            return None
+        return x
+
 
 class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
 
@@ -37,11 +63,11 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         """
         train_transform = Compose(
             [
+            UniformTemporalSubsampleOverMultipleKeys(self._subsample, "video", "label"),
             ApplyTransformToKey(
               key="video",
               transform=Compose(
                   [
-                    UniformTemporalSubsample(self._subsample),
                     Lambda(normalize_image),
                     Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                     RandomShortSideScale(min_size=256, max_size=320),
@@ -50,6 +76,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
                   ]
                 ),
               ),
+            RemoveTrainingExamplesByProbabilityAndCondition(0.5, lambda x: np.max(x['label']) == 0),
             ]
         )
         train_dataset = pytorchvideo.data.UCFCrimeDataset(
@@ -62,6 +89,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self._batch_size,
+            pin_memory=True,
             num_workers=self._num_workers,
         )
 
@@ -92,6 +120,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             val_dataset,
             batch_size=1,
+            pin_memory=True,
             num_workers=self._num_workers,
         )
 
@@ -120,5 +149,6 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             val_dataset,
             batch_size=1,
+            pin_memory=True,
             num_workers=self._num_workers,
         )
