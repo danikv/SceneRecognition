@@ -98,6 +98,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         """
         val_transform = Compose(
             [
+            UniformTemporalSubsampleOverMultipleKeys(self._subsample, "video", "label"),
             ApplyTransformToKey(
               key="video",
               transform=Compose(
@@ -119,7 +120,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         )
         return torch.utils.data.DataLoader(
             val_dataset,
-            batch_size=1,
+            batch_size=self._batch_size,
             pin_memory=True,
             num_workers=self._num_workers,
         )
@@ -127,6 +128,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
     def test_data(self):
         test_transform = Compose(
             [
+            UniformTemporalSubsampleOverMultipleKeys(self._subsample, "video", "label"),
             ApplyTransformToKey(
               key="video",
               transform=Compose(
@@ -148,7 +150,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
         )
         return torch.utils.data.DataLoader(
             val_dataset,
-            batch_size=1,
+            batch_size=self._batch_size,
             pin_memory=True,
             num_workers=self._num_workers,
         )
