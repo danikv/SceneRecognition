@@ -103,7 +103,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
               key="video",
               transform=Compose(
                   [
-                    UniformTemporalSubsample(self._clip_duration * self._fps),
+                    #UniformTemporalSubsample(self._clip_duration * self._fps),
                     Lambda(normalize_image),
                     Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                   ]
@@ -133,7 +133,7 @@ class UCFCrimeDataModule(pytorch_lightning.LightningDataModule):
               key="video",
               transform=Compose(
                   [
-                    UniformTemporalSubsample(self._clip_duration * self._fps),
+                    #UniformTemporalSubsample(self._clip_duration * self._fps),
                     Lambda(normalize_image),
                     Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                   ]
