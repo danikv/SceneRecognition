@@ -85,7 +85,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       targets = torch.cat([tmp['target'] for tmp in outputs])
       #confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=400)
       accuracy = torchmetrics.functional.accuracy(preds, targets)
-      accuracy_top_5 = torchmetrics.functional.accuracy(preds, targets, top_k=5)
+      #accuracy_top_5 = torchmetrics.functional.accuracy(preds, targets, top_k=5)
       mAp = torchmetrics.functional.accuracy(preds, targets, average='macro', num_classes=400)
       # if log_confusion_matrix:  
       #   df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(400), columns=range(400))
@@ -96,7 +96,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       #   self.logger.experiment.add_figure(f"{mode} Confusion matrix", fig_, self.current_epoch)
     
       self.log(f"{mode} Accuracy per Epoch", accuracy, on_epoch=True)
-      self.log(f"{mode} Accuracy Top 5 per Epoch", accuracy_top_5, on_epoch=True)
+      #self.log(f"{mode} Accuracy Top 5 per Epoch", accuracy_top_5, on_epoch=True)
       self.log(f"{mode} MAP per Epoch", mAp, on_epoch=True)
 
   def configure_optimizers(self):
