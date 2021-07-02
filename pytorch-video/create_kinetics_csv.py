@@ -30,9 +30,9 @@ new_csv = []
 
 for i, row in csv.iterrows():
     video = {}
-    video['path'] = row['youtube_id']
+    video['path'] = row['youtube_id'] + "_" + '{0:06d}'.format(row["time_start"]) + "_" + '{0:06d}'.format(row["time_end"]) + ".mp4"
     video['label'] = kinetics_classnames_to_id[row['label']]
     new_csv.append(video)
 
 dataset = pd.DataFrame(new_csv)
-dataset.to_csv(output, index=False)
+dataset.to_csv(output, index=False, header=False, sep=' ')
