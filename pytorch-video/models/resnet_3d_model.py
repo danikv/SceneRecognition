@@ -12,7 +12,7 @@ def make_kinetics_resnet():
   return pytorchvideo.models.resnet.create_resnet(
       input_channel=3, # RGB input from Kinetics
       model_depth=50, # For the tutorial let's just use a 50 layer network
-      model_num_class=10,
+      model_num_class=400,
       norm=nn.BatchNorm3d,
       activation=nn.ReLU,
   )
@@ -26,7 +26,7 @@ def load_pretrained_model():
 class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
   def __init__(self, learning_rate):
       super().__init__()
-      self._model = load_pretrained_model()
+      self._model = make_kinetics_resnet()
       self._learning_rate = learning_rate
 
   def forward(self, x):
