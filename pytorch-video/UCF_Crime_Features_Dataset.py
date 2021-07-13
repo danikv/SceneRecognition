@@ -7,7 +7,7 @@ import os
 class UCFCrimeFeaturesDataset(Dataset):
     def __init__(self, annotations_file, features_dir):
         super().__init__()
-        with open(annotations_file) as f:
+        with open(annotations_file, 'rb') as f:
             labels = pickle.load(f)
         self._labels = [(feature_file_name, video_labels) for feature_file_name, video_labels in labels.items()]
         self._features_dir = features_dir
@@ -41,16 +41,16 @@ class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
     def val_dataloader(self):
         val_dataset = UCFCrimeFeaturesDataset(os.path.join(self._feature_dir, "val_dataset.pickle"), self._feature_dir)
         return torch.utils.data.DataLoader(
-            train_dataset,
+            val_dataset,
             batch_size=self._batch_size,
             pin_memory=True,
             num_workers=self._num_workers,
         )
 
     def test_data(self):
-        train_dataset = UCFCrimeFeaturesDataset(os.path.join(self._feature_dir, "test_dataset.pickle"), self._feature_dir)
+        test_dataset = UCFCrimeFeaturesDataset(os.path.join(self._feature_dir, "test_dataset.pickle"), self._feature_dir)
         return torch.utils.data.DataLoader(
-            train_dataset,
+            test_dataset,
             batch_size=self._batch_size,
             pin_memory=True,
             num_workers=self._num_workers,
