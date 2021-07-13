@@ -24,6 +24,7 @@ class UCFCrimeFeaturesDataset(Dataset):
 
 class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self, feature_dir, batch_size, num_workers):
+        super().__init__()
         self._feature_dir = feature_dir
         self._batch_size = batch_size
         self._num_workers = num_workers
