@@ -37,7 +37,7 @@ class Resnet3dLstmModel(nn.Module):
 class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
   def __init__(self, learning_rate):
       super().__init__()
-      self._model = load_pretrained_model()
+      self._model = Resnet3dLstmModel(4096, 1, 10)
       self._learning_rate = learning_rate
 
   def forward(self, x):
