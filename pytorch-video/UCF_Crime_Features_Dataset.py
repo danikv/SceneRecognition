@@ -6,6 +6,7 @@ import os
 
 class UCFCrimeFeaturesDataset(Dataset):
     def __init__(self, annotations_file, features_dir):
+        super().__init__()
         with open(annotations_file) as f:
             labels = pickle.load(f)
         self._labels = [(feature_file_name, video_labels) for feature_file_name, video_labels in labels.items()]
