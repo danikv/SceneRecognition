@@ -19,7 +19,7 @@ class UCFCrimeFeaturesDataset(Dataset):
         feature_file_name, video_labels = self._labels[idx]
         feature_path = os.path.join(self._features_dir, feature_file_name)
         features = torch.load(feature_path)
-        return features, video_labels
+        return {'video': features, 'label': video_labels}
 
 
 class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
