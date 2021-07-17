@@ -7,6 +7,7 @@ import torchmetrics
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 def make_kinetics_resnet():
   return pytorchvideo.models.resnet.create_resnet(
