@@ -36,8 +36,8 @@ class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self._batch_size,
-            #pin_memory=True,
-            #num_workers=self._num_workers,
+            pin_memory=True,
+            num_workers=self._num_workers,
         )
 
     def val_dataloader(self):
@@ -45,8 +45,8 @@ class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             val_dataset,
             batch_size=self._batch_size,
-            #pin_memory=True,
-            #num_workers=self._num_workers,
+            pin_memory=True,
+            num_workers=self._num_workers,
         )
 
     def test_data(self):
@@ -54,6 +54,6 @@ class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             test_dataset,
             batch_size=self._batch_size,
-            #pin_memory=True,
-            #num_workers=self._num_workers,
+            pin_memory=True,
+            num_workers=self._num_workers,
         )
