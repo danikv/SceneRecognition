@@ -17,28 +17,24 @@ def make_kinetics_resnet():
       activation=nn.ReLU,
   )
 
-def load_pretrained_model():
-  model_name = "slow_r50"
-  model = torch.hub.load("facebookresearch/pytorchvideo", model=model_name, pretrained=True)
-  model.blocks[-1].proj = nn.Linear(2048, 10)
-  return model
-
 class Resnet3dLstmModel(nn.Module):
     def __init__(self, hidden_dim, num_layers, num_classes):
         super().__init__()
-        #self._base_model = load_pretrained_model()
         self._lstm = nn.LSTM(2048, hidden_dim, num_layers, dropout=0.2, batch_first=True)
         self._fc = nn.Linear(hidden_dim, num_classes)
 
     def forward(self, x):
-        #x = self._base_model(x)
         x, _ = self._lstm(x)
         return self._fc(x)
 
 class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
-  def __init__(self, learning_rate):
+  def __init__(self, learning_rate, anomaly_classification, hidden_dim):
       super().__init__()
-      self._model = Resnet3dLstmModel(4096, 1, 10)
+      self._anomaly_classification = anomaly_classification
+      if anomaly_classification:
+        self._model = Resnet3dLstmModel(hidden_dim, 1, 10)
+      else:
+          self._model = Resnet3dLstmModel(hidden_dim, 1, 2)
       self._learning_rate = learning_rate
 
   def forward(self, x):
@@ -46,7 +42,10 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
   def training_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
-      y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
+      if self._anomaly_classification:
+        y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
+      else:
+        y_hat = torch.squeeze(y_hat, 0).reshape(-1, 2)
 
       #y_true, _ = torch.max(batch["label"], dim=1)
       y_true = batch['label']
@@ -68,7 +67,10 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
   def validation_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
-      y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
+      if self._anomaly_classification:
+        y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
+      else:
+        y_hat = torch.squeeze(y_hat, 0).reshape(-1, 2)
 
       #y_true, _ = torch.max(batch["label"], dim=1)
       y_true = batch['label']
@@ -84,7 +86,10 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
   def test_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
-      y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
+      if self._anomaly_classification:
+        y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
+      else:
+        y_hat = torch.squeeze(y_hat, 0).reshape(-1, 2)
 
       #y_true, _ = torch.max(batch["label"], dim=1)
       y_true = batch['label']
@@ -104,17 +109,18 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
   def epoch_end_metrics(self, outputs, mode, log_confusion_matrix):
       preds = torch.cat([tmp['preds'] for tmp in outputs])
       targets = torch.cat([tmp['target'] for tmp in outputs])
+      num_classes = 10 if self._anomaly_classification else 2
       #confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=400)
       accuracy = torchmetrics.functional.accuracy(preds, targets)
       #accuracy_top_5 = torchmetrics.functional.accuracy(preds, targets, top_k=5)
-      mAp = torchmetrics.functional.accuracy(preds, targets, average='macro', num_classes=400)
-      # if log_confusion_matrix:  
-      #   df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(400), columns=range(400))
-      #   plt.figure(figsize = (10,7))
-      #   fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
-      #   plt.close(fig_)
+      mAp = torchmetrics.functional.accuracy(preds, targets, average='macro', num_classes=num_classes)
+      if log_confusion_matrix:  
+        df_cm = pd.DataFrame(confusion_matrix.cpu().numpy(), index = range(num_classes), columns=range(num_classes))
+        plt.figure(figsize = (10,7))
+        fig_ = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
+        plt.close(fig_)
 
-      #   self.logger.experiment.add_figure(f"{mode} Confusion matrix", fig_, self.current_epoch)
+        self.logger.experiment.add_figure(f"{mode} Confusion matrix", fig_, self.current_epoch)
     
       self.log(f"{mode} Accuracy per Epoch", accuracy, on_epoch=True)
       #self.log(f"{mode} Accuracy Top 5 per Epoch", accuracy_top_5, on_epoch=True)

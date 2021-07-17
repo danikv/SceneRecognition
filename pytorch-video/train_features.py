@@ -5,8 +5,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 import argparse
 from pytorch_lightning.loggers import TensorBoardLogger
   
-def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_duration, model_save_dir, subsampled_frames, learning_rate, check_val_every_n_epoch):
-    model = VideoClassificationLightningModule(learning_rate)
+def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_duration, model_save_dir, subsampled_frames, learning_rate, check_val_every_n_epoch, anomaly_classification, hidden_dim):
+    model = VideoClassificationLightningModule(learning_rate, anomaly_classification, hidden_dim)
     data_module = UCFCrimeFeatureDataModule(dataset_folder, batch_size, num_workers)
     base_filename = f'resnet-3d-lstm-{clip_duration}-{subsampled_frames}'
     checkpoint_callback = ModelCheckpoint(monitor='val_loss',
@@ -31,6 +31,8 @@ if __name__ == "__main__":
     parser.add_argument('--subsampled_frames', type=int, help='size of sub submpled frames from the clip')
     parser.add_argument('--lr', type=float, help="learning rate of the model")
     parser.add_argument('--check_val', type=int, help="how many train epochs until we check on the val data set")
+    parser.add_argument('--anomaly_classification', type=bool, help="classify as classes or anomelies")
+    parser.add_argument('--hidden_dim', type=bool, help="hidden dim of the model")
 
     args = parser.parse_args()
 
@@ -44,4 +46,6 @@ if __name__ == "__main__":
     subsampled_frames = args.subsampled_frames
     lr = args.lr
     check_val_every_n_epoch = args.check_val
-    train(epochs, dataset_folder, batch_size, num_processes, stats_file, clip_duration, prefix_path, subsampled_frames, lr, check_val_every_n_epoch)
+    anomaly_classification = args.anomaly_classification
+    hidden_dim = args.hidden
+    train(epochs, dataset_folder, batch_size, num_processes, stats_file, clip_duration, prefix_path, subsampled_frames, lr, check_val_every_n_epoch, anomaly_classification, hidden_dim)
