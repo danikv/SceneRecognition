@@ -6,7 +6,7 @@ import pytorch_lightning
 import torchmetrics
 import seaborn as sns
 import matplotlib.pyplot as plt
-import pandas as pd
+import numpy as np
 
 def make_kinetics_resnet():
   return pytorchvideo.models.resnet.create_resnet(
@@ -25,6 +25,7 @@ def load_pretrained_model():
 
 class Resnet3dLstmModel(nn.Module):
     def __init__(self, hidden_dim, num_layers, num_classes):
+        super().__init__()
         #self._base_model = load_pretrained_model()
         self._lstm = nn.LSTM(2048, hidden_dim, num_layers, dropout=0.2, batch_first=True)
         self._fc = nn.Linear(hidden_dim, num_classes)
@@ -44,16 +45,16 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       return self._model(x)
 
   def training_step(self, batch, batch_idx):
-      # The model expects a video tensor of shape (B, C, T, H, W), which is the
-      # format provided by the dataset
-      y_true = batch['label']
-      #y_true, _ = torch.max(batch["label"], dim=1)
-
       y_hat = self._model(batch["video"])
+      y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
+
+      #y_true, _ = torch.max(batch["label"], dim=1)
+      y_true = batch['label']
+      y_true = torch.squeeze(y_true, 0)
 
       # Compute cross entropy loss, loss.backwards will be called behind the scenes
       # by PyTorchLightning after being returned from this method.
-      loss = F.cross_entropy(y_hat, y_true.long())
+      loss = F.cross_entropy(y_hat, y_true)
       predictions = torch.argmax(y_hat, dim=1)
       # Log the train loss to Tensorboard
       self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)  
@@ -67,10 +68,13 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
   def validation_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
+      y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
 
       #y_true, _ = torch.max(batch["label"], dim=1)
       y_true = batch['label']
-      loss = F.cross_entropy(y_hat, y_true.long())
+      y_true = torch.squeeze(y_true, 0)
+
+      loss = F.cross_entropy(y_hat, y_true)
       predictions = torch.argmax(y_hat, dim=1)
       self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)      
       return { 'loss': loss, 'preds': predictions, 'target': y_true}
@@ -80,12 +84,18 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
 
   def test_step(self, batch, batch_idx):
       y_hat = self._model(batch["video"])
+      y_hat = torch.squeeze(y_hat, 0).reshape(-1, 10)
 
       #y_true, _ = torch.max(batch["label"], dim=1)
       y_true = batch['label']
-      loss = F.cross_entropy(y_hat, y_true.long())
+      y_true = torch.squeeze(y_true, 0)
+
+      # Compute cross entropy loss, loss.backwards will be called behind the scenes
+      # by PyTorchLightning after being returned from this method.
+      loss = F.cross_entropy(y_hat, y_true)
       predictions = torch.argmax(y_hat, dim=1)
-      self.log('test_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)     
+      # Log the train loss to Tensorboard
+      self.log('test_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)  
       return { 'loss': loss, 'preds': predictions, 'target': y_true}
 
   def test_epoch_end(self, outputs):

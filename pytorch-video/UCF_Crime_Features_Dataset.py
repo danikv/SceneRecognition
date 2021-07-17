@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 import pytorch_lightning
 import pickle
 import os
+import numpy as np
 
 class UCFCrimeFeaturesDataset(Dataset):
     def __init__(self, annotations_file, features_dir):
@@ -18,8 +19,9 @@ class UCFCrimeFeaturesDataset(Dataset):
     def __getitem__(self, idx):
         feature_file_name, video_labels = self._labels[idx]
         feature_path = os.path.join(self._features_dir, feature_file_name)
-        features = torch.load(feature_path)
-        return {'video': features, 'label': video_labels}
+        features = torch.load(feature_path, map_location=torch.device('cpu'))
+        labels = torch.from_numpy(np.array(video_labels, dtype=np.int64))
+        return {'video': features, 'label': labels}
 
 
 class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
@@ -34,8 +36,8 @@ class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self._batch_size,
-            pin_memory=True,
-            num_workers=self._num_workers,
+            #pin_memory=True,
+            #num_workers=self._num_workers,
         )
 
     def val_dataloader(self):
@@ -43,8 +45,8 @@ class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             val_dataset,
             batch_size=self._batch_size,
-            pin_memory=True,
-            num_workers=self._num_workers,
+            #pin_memory=True,
+            #num_workers=self._num_workers,
         )
 
     def test_data(self):
@@ -52,6 +54,6 @@ class UCFCrimeFeatureDataModule(pytorch_lightning.LightningDataModule):
         return torch.utils.data.DataLoader(
             test_dataset,
             batch_size=self._batch_size,
-            pin_memory=True,
-            num_workers=self._num_workers,
+            #pin_memory=True,
+            #num_workers=self._num_workers,
         )

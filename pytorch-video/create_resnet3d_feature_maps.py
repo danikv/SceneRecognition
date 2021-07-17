@@ -20,6 +20,12 @@ def load_pretrained_model():
   model.blocks[-1].proj = nn.Identity()
   return model
 
+def save_video(output_folder, name, features):
+    video_features = torch.from_numpy(np.array(features))
+    torch.save(video_features, os.path.join(output_folder, name))
+    print(name)
+    print(video_features)
+
 
 parser = argparse.ArgumentParser(description='train a lstm over a videos dataset using grid search')
 parser.add_argument('--dataset', help='the dataset folder which contains 2 folders, videos and labels')
@@ -54,10 +60,7 @@ for data in train:
     features = model(video)
     for i, name in enumerate(names):
         if last_video_name != '' and last_video_name != name:
-            video_features = torch.from_numpy(np.array(current_video))
-            torch.save(video_features, os.path.join(output_folder, last_video_name))
-            print(last_video_name)
-            print(video_features.shape)
+            save_video(output_folder, last_video_name, current_video)
             last_video_name = name
             current_video = []
         elif last_video_name == '':
@@ -65,6 +68,7 @@ for data in train:
         new_dataset[name].append(labels[i].cpu().detach().clone())
         current_video.append(features[i].cpu().detach().numpy())
     #print(new_dataset[index][0][1].shape)
+save_video(output_folder, last_video_name, current_video)
 
 
 with open(os.path.join(output_folder, 'val_dataset.pickle'), 'wb') as handle:
