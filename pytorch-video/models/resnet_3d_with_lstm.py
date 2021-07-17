@@ -34,7 +34,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       if anomaly_classification:
         self._model = Resnet3dLstmModel(hidden_dim, 1, 10)
       else:
-          self._model = Resnet3dLstmModel(hidden_dim, 1, 2)
+        self._model = Resnet3dLstmModel(hidden_dim, 1, 2)
       self._learning_rate = learning_rate
 
   def forward(self, x):

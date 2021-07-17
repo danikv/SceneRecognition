@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, help="learning rate of the model")
     parser.add_argument('--check_val', type=int, help="how many train epochs until we check on the val data set")
     parser.add_argument('--anomaly_classification', type=bool, help="classify as classes or anomelies")
-    parser.add_argument('--hidden_dim', type=bool, help="hidden dim of the model")
+    parser.add_argument('--hidden_dim', type=int, help="hidden dim of the model")
 
     args = parser.parse_args()
 
