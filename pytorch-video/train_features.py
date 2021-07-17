@@ -47,5 +47,5 @@ if __name__ == "__main__":
     lr = args.lr
     check_val_every_n_epoch = args.check_val
     anomaly_classification = args.anomaly_classification
-    hidden_dim = args.hidden
+    hidden_dim = args.hidden_dim
     train(epochs, dataset_folder, batch_size, num_processes, stats_file, clip_duration, prefix_path, subsampled_frames, lr, check_val_every_n_epoch, anomaly_classification, hidden_dim)
