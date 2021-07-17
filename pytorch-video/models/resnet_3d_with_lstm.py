@@ -111,7 +111,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       preds = torch.cat([tmp['preds'] for tmp in outputs])
       targets = torch.cat([tmp['target'] for tmp in outputs])
       num_classes = 10 if self._anomaly_classification else 2
-      #confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=400)
+      confusion_matrix = torchmetrics.functional.confusion_matrix(preds, targets, num_classes=400)
       accuracy = torchmetrics.functional.accuracy(preds, targets)
       #accuracy_top_5 = torchmetrics.functional.accuracy(preds, targets, top_k=5)
       mAp = torchmetrics.functional.accuracy(preds, targets, average='macro', num_classes=num_classes)
