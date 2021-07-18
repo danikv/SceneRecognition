@@ -35,6 +35,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       if anomaly_classification:
         self._model = Resnet3dLstmModel(hidden_dim, 1, 10)
       else:
+        print('bla')
         self._model = Resnet3dLstmModel(hidden_dim, 1, 2)
       self._learning_rate = learning_rate
 
@@ -51,7 +52,11 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       #y_true, _ = torch.max(batch["label"], dim=1)
       y_true = batch['label']
       y_true = torch.squeeze(y_true, 0)
+      if not self._anomaly_classification:
+        print('blabla')
+        y_true = y_true.bool().long()
 
+      print(y_true)
       # Compute cross entropy loss, loss.backwards will be called behind the scenes
       # by PyTorchLightning after being returned from this method.
       loss = F.cross_entropy(y_hat, y_true)
@@ -76,6 +81,8 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       #y_true, _ = torch.max(batch["label"], dim=1)
       y_true = batch['label']
       y_true = torch.squeeze(y_true, 0)
+      if not self._anomaly_classification:
+        y_true = y_true.bool().long()
 
       loss = F.cross_entropy(y_hat, y_true)
       predictions = torch.argmax(y_hat, dim=1)
@@ -95,6 +102,8 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       #y_true, _ = torch.max(batch["label"], dim=1)
       y_true = batch['label']
       y_true = torch.squeeze(y_true, 0)
+      if not self._anomaly_classification:
+        y_true = y_true.bool().long()
 
       # Compute cross entropy loss, loss.backwards will be called behind the scenes
       # by PyTorchLightning after being returned from this method.
