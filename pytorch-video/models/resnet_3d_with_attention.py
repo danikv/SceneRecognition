@@ -18,25 +18,35 @@ def make_kinetics_resnet():
       activation=nn.ReLU,
   )
 
-class Resnet3dLstmModel(nn.Module):
-    def __init__(self, hidden_dim, num_layers, num_classes):
+class Resnet3dAttentionModel(nn.Module):
+    def __init__(self, num_heads, num_classes):
         super().__init__()
-        self._lstm = nn.LSTM(2048, hidden_dim, num_layers, dropout=0.2, batch_first=True)
-        self._fc = nn.Linear(hidden_dim, 1024)
-        self._fc2 = nn.Linear(1024, num_classes)
+        self._num_heads = num_heads
+        self._attention = nn.MultiheadAttention(2048, num_heads)
+        self._fc = nn.Linear(2048, 1024)
+        self._attention2 = nn.MultiheadAttention(1024, num_heads)
+        self._fc2 = nn.Linear(1024, 512)
+        self._attention3 = nn.MultiheadAttention(512, num_heads)
+        self._fc3 = nn.Linear(512, num_classes)
 
     def forward(self, x):
-        x, _ = self._lstm(x)
-        return self._fc2(self._fc(x))
+        size = x.shape[1]
+        x = x.reshape(size, -1, 2048)
+        nopeak_mask = np.triu(np.ones((self._num_heads, size, size)),k=1).astype('uint8')
+        nopeak_mask = (torch.from_numpy(nopeak_mask) == 1).cuda()
+        x, _ = self._attention(x, x, x, attn_mask=nopeak_mask)
+        x = self._fc(x)
+        x, _ = self._attention2(x, x, x, attn_mask=nopeak_mask)
+        return self._fc3(self._fc2(x))
 
 class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
-  def __init__(self, learning_rate, anomaly_classification, hidden_dim):
+  def __init__(self, learning_rate, anomaly_classification, num_heads):
       super().__init__()
       self._anomaly_classification = anomaly_classification
       if anomaly_classification:
-        self._model = Resnet3dLstmModel(hidden_dim, 1, 10)
+        self._model = Resnet3dAttentionModel(num_heads, 10)
       else:
-        self._model = Resnet3dLstmModel(hidden_dim, 1, 2)
+        self._model = Resnet3dAttentionModel(num_heads, 2)
       self._learning_rate = learning_rate
 
   def forward(self, x):
@@ -55,6 +65,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
       if not self._anomaly_classification:
         y_true = y_true.bool().long()
 
+      #print(y_hat)
       # Compute cross entropy loss, loss.backwards will be called behind the scenes
       # by PyTorchLightning after being returned from this method.
       loss = F.cross_entropy(y_hat, y_true)

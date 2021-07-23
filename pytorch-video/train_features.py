@@ -1,20 +1,18 @@
 from UCF_Crime_Features_Dataset import UCFCrimeFeatureDataModule
-from models.resnet_3d_with_lstm import VideoClassificationLightningModule
 import pytorch_lightning
 from pytorch_lightning.callbacks import ModelCheckpoint
 import argparse
 from pytorch_lightning.loggers import TensorBoardLogger
   
-def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, clip_duration, model_save_dir, subsampled_frames, learning_rate, check_val_every_n_epoch, anomaly_classification, hidden_dim, gradient_clip):
-    model = VideoClassificationLightningModule(learning_rate, anomaly_classification, hidden_dim)
+def train(min_ephocs, dataset_folder, batch_size, num_workers, stats_file, model_save_dir, check_val_every_n_epoch, gradient_clip, base_filename):
+    
     data_module = UCFCrimeFeatureDataModule(dataset_folder, batch_size, num_workers)
-    base_filename = f'resnet-3d-lstm-{clip_duration}-{subsampled_frames}-{hidden_dim}'
     checkpoint_callback = ModelCheckpoint(monitor='val_loss',
                         dirpath=f"{model_save_dir}",
                         filename= base_filename + '-{epoch:02d}-{val_loss:.2f}',
                         save_top_k=3,
                         mode='min')
-    logger = TensorBoardLogger(stats_file, name=f"resnet-3d-lstm-{clip_duration}-{subsampled_frames}-{learning_rate}-{hidden_dim}-{anomaly_classification}")
+    logger = TensorBoardLogger(stats_file, name=base_filename)
     trainer = pytorch_lightning.Trainer(logger=logger, gpus=1, callbacks=[checkpoint_callback],  min_epochs=min_ephocs, check_val_every_n_epoch=check_val_every_n_epoch, gradient_clip_val=gradient_clip)
     trainer.fit(model, data_module)
 
@@ -32,8 +30,11 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, help="learning rate of the model")
     parser.add_argument('--check_val', type=int, help="how many train epochs until we check on the val data set")
     parser.add_argument('--anomaly_classification', type=bool, help="classify as classes or anomelies")
-    parser.add_argument('--hidden_dim', type=int, help="hidden dim of the model")
-    parser.add_argument('--clip', type=float, help="gradient clipping norm")
+    parser.add_argument('--hidden_dim', type=int, help="hidden dim for the lstm model", required=False)
+    parser.add_argument('--lstm_layers', type=int, help="hidden dim for the lstm model", required=False)
+    parser.add_argument('--num_heads', type=int, help="number of head of the attention model", required=False)
+    parser.add_argument('--clip', type=float, help="gradient clipping norm", required=False)
+    parser.add_argument('--type', type=str, help='attation or lstm')
 
     args = parser.parse_args()
 
@@ -45,9 +46,21 @@ if __name__ == "__main__":
     prefix_path = args.model_save_path
     clip_duration = args.clip_duration
     subsampled_frames = args.subsampled_frames
-    lr = args.lr
+    learning_rate = args.lr
     check_val_every_n_epoch = args.check_val
     anomaly_classification = args.anomaly_classification
-    hidden_dim = args.hidden_dim
-    clip = args.clip
-    train(epochs, dataset_folder, batch_size, num_processes, stats_file, clip_duration, prefix_path, subsampled_frames, lr, check_val_every_n_epoch, anomaly_classification, hidden_dim, clip)
+    type = args.type
+    if type == 'lstm':
+        from models.resnet_3d_with_lstm import VideoClassificationLightningModule
+        hidden_dim = args.hidden_dim
+        lstm_layers = args.lstm_layers
+        clip = args.clip
+        model = VideoClassificationLightningModule(learning_rate, anomaly_classification, hidden_dim)
+        base_filename = f'resnet-3d-lstm-{clip_duration}-{subsampled_frames}-{hidden_dim}-{learning_rate}-{anomaly_classification}-{clip}'
+    else:
+        from models.resnet_3d_with_attention import VideoClassificationLightningModule
+        num_heads = args.num_heads
+        clip = None
+        model = VideoClassificationLightningModule(learning_rate, anomaly_classification, num_heads)
+        base_filename = f'resnet-3d-attention-{clip_duration}-{subsampled_frames}-{num_heads}-{learning_rate}-{anomaly_classification}'
+    train(epochs, dataset_folder, batch_size, num_processes, stats_file, prefix_path, check_val_every_n_epoch, clip, base_filename)
